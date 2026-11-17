@@ -1,197 +1,198 @@
 # codex-harness-template
 
-> Ways of working de engenharia de software com **Python** e **OpenAI Codex**: um template que gera
-> repositórios prontos para construir serviços robustos, do *discovery* do produto até o código
-> verificado em produção.
+> A software engineering way of working for **Python** with **OpenAI Codex**: a template that
+> generates repositories ready to build robust services, from product *discovery* to code
+> verified in production.
 
 ---
 
-## Sumário
+## Contents
 
-- [O problema que resolve](#o-problema-que-resolve)
-- [Como funciona](#como-funciona)
-- [Início rápido](#início-rápido)
-- [O SDLC agêntico](#o-sdlc-agêntico)
-- [A camada Codex](#a-camada-codex)
-- [O serviço gerado](#o-serviço-gerado)
-- [Qualidade e segurança](#qualidade-e-segurança)
-- [CI/CD: do merge à produção verificada](#cicd-do-merge-à-produção-verificada)
-- [Configuração pós-geração](#configuração-pós-geração)
-- [Estrutura deste repositório](#estrutura-deste-repositório)
-- [Desenvolvendo o template](#desenvolvendo-o-template)
-- [Decisões e princípios](#decisões-e-princípios)
+- [The problem it solves](#the-problem-it-solves)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [The agentic SDLC](#the-agentic-sdlc)
+- [The Codex layer](#the-codex-layer)
+- [The generated service](#the-generated-service)
+- [Quality and security](#quality-and-security)
+- [CI/CD: from merge to verified production](#cicd-from-merge-to-verified-production)
+- [Post-generation setup](#post-generation-setup)
+- [Repository layout](#repository-layout)
+- [Developing the template](#developing-the-template)
+- [Principles](#principles)
 
 ---
 
-## O problema que resolve
+## The problem it solves
 
-Agentes de código aceleram a escrita de código, mas sem processo eles também aceleram dívida
-técnica: código sem especificação, sem testes que provem os requisitos, sem verificação de
-segurança e sem garantia de que o que foi escrito chegou em produção.
+Coding agents speed up writing code, but without a process they also speed up technical debt:
+code with no specification, no tests proving the requirements, no security checks, and no
+guarantee that what was written actually reached production.
 
-Este projeto define **como** humanos e agentes trabalham juntos e entrega isso pronto para uso:
+This project defines **how** humans and agents work together, and ships it ready to use:
 
-- **Processo**: seis fases (Discovery → Specify → Plan → Implement → Review → Ship). Cada uma tem
-  um artefato versionado no repositório e um gate de aprovação.
-- **Agentes**: instruções (`AGENTS.md`), skills por fase e subagents especializados para o Codex.
-- **Engenharia**: um serviço Python de referência com arquitetura hexagonal, integrações reais
-  (banco, cache, eventos, APIs) e testes em todos os níveis.
-- **Guardrails automáticos**: lint, tipos, arquitetura, auditoria de dependências, segredos e
-  scan de imagem, aplicados localmente, no pre-commit e no CI.
-- **Entrega contínua**: cada merge chega em produção, e um smoke test prova que a versão certa
-  está no ar.
+- **Process**: six phases (Discovery → Specify → Plan → Implement → Review → Ship). Each one has
+  a versioned artifact in the repository and an approval gate.
+- **Agents**: instructions (`AGENTS.md`), one skill per phase and specialized subagents for Codex.
+- **Engineering**: a reference Python service with hexagonal architecture, real integrations
+  (database, cache, events, APIs) and tests at every level.
+- **Automated guardrails**: lint, types, architecture, dependency audit, secrets and image
+  scanning, enforced locally, in pre-commit and in CI.
+- **Continuous delivery**: every merge reaches production, and a smoke test proves the right
+  version is live.
 
-Princípio central: **não reinventar a roda**. Tudo é feito com ferramentas consolidadas do
-ecossistema (uv, Ruff, mypy, pytest, FastAPI, SQLAlchemy, FastStream, Copier, GitHub Actions);
-o template apenas as integra de forma enxuta.
+Core principle: **don't reinvent the wheel**. Everything is built on established tools from the
+ecosystem (uv, Ruff, mypy, pytest, FastAPI, SQLAlchemy, FastStream, Copier, GitHub Actions); the
+template only wires them together, leanly.
 
-## Como funciona
+## How it works
 
 ```mermaid
 flowchart LR
-  T[codex-harness-template<br/>Copier] -->|copier copy<br/>ou $new-service| R[Novo repositório]
-  R --> C[Camada Codex<br/>AGENTS.md · skills · subagents]
-  R --> S[Serviço Python<br/>hexagonal + integrações]
+  T[codex-harness-template<br/>Copier] -->|copier copy<br/>or $new-service| R[New repository]
+  R --> C[Codex layer<br/>AGENTS.md · skills · subagents]
+  R --> S[Python service<br/>hexagonal + integrations]
   R --> G[Gates<br/>make check · pre-commit]
   R --> P[CI/CD<br/>GitHub Actions]
   T -.copier update.-> R
 ```
 
-1. Você responde algumas perguntas: nome, versão do Python, Postgres?, Redis?, Kafka/RabbitMQ?
-2. O [Copier](https://copier.readthedocs.io) renderiza um repositório com **somente** o que você
-   escolheu (sem código morto de integrações não usadas).
-3. O projeto gerado já passa no próprio gate (`make check`) e está pronto para o primeiro
+1. You answer a few questions: name, Python version, Postgres?, Redis?, Kafka/RabbitMQ?
+2. [Copier](https://copier.readthedocs.io) renders a repository with **only** what you chose
+   (no dead code for integrations you don't use).
+3. The generated project already passes its own gate (`make check`) and is ready for the first
    `$discovery`.
-4. Quando o template evoluir, `copier update` traz as melhorias para os projetos existentes.
+4. When the template evolves, `copier update` brings the improvements to existing projects.
 
-## Início rápido
+## Quick start
 
-**Pré-requisitos:** [uv](https://docs.astral.sh/uv/), Docker, `make`, Git e, opcionalmente,
-o [Codex CLI](https://developers.openai.com/codex).
+**Prerequisites:** [uv](https://docs.astral.sh/uv/), Docker, `make`, Git and, optionally, the
+[Codex CLI](https://developers.openai.com/codex).
 
-### Opção 1 — Copier (interativo)
+### Option 1 — Copier (interactive)
 
 ```bash
-uvx copier copy gh:spassos/codex-harness-template meu-servico
-cd meu-servico
-make setup   # instala dependências e git hooks
-make check   # lint, tipos, arquitetura, auditoria, testes (com Docker) e cobertura
-make up      # sobe app + infraestrutura → http://localhost:8000/docs
+uvx copier copy gh:spassos/codex-harness-template my-service
+cd my-service
+make setup   # install dependencies and git hooks
+make check   # lint, types, architecture, audit, tests (with Docker) and coverage
+make up      # start app + infrastructure → http://localhost:8000/docs
 ```
 
-### Opção 2 — Copier (não interativo)
+### Option 2 — Copier (non-interactive)
 
 ```bash
-uvx copier copy --defaults gh:spassos/codex-harness-template meu-servico \
+uvx copier copy --defaults gh:spassos/codex-harness-template my-service \
   -d project_name="Orders Service" \
   -d use_postgres=true -d use_redis=true -d event_broker=kafka
 ```
 
-### Opção 3 — Agente de scaffolding no Codex
+### Option 3 — Scaffolding agent in Codex
 
-Clone este repositório, abra o `codex` nele e peça:
+Clone this repository, open `codex` in it and ask:
 
 ```text
-$new-service crie um serviço de pedidos com Postgres e Kafka
+$new-service create an orders service with Postgres and Kafka
 ```
 
-A skill [`new-service`](.agents/skills/new-service/SKILL.md) faz a entrevista, renderiza o
-template, roda `make check` no resultado, faz o commit inicial e sugere começar o `$discovery`.
+The [`new-service`](.agents/skills/new-service/SKILL.md) skill interviews you, renders the
+template, runs `make check` on the result, makes the initial commit and suggests starting
+`$discovery`.
 
-### Perguntas do template
+### Template questions
 
-| Pergunta | Padrão | Efeito |
+| Question | Default | Effect |
 |---|---|---|
-| `project_name` | — | Nome do produto/serviço |
-| `project_slug` | derivado | Nome do repositório/imagem (kebab-case) |
-| `package_name` | derivado | Pacote Python (snake_case) |
-| `description` | derivado | Descrição curta |
-| `author_name` | `Platform Team` | Time responsável |
-| `python_version` | `3.13` | 3.12, 3.13 ou 3.14 |
-| `use_postgres` | `true` | Repositório SQL, Alembic, testes com Postgres real |
-| `use_redis` | `true` | Cache-aside com Redis |
-| `event_broker` | `kafka` | `kafka`, `rabbit` ou `none` (publisher + worker consumidor) |
-| `coverage_threshold` | `90` | Cobertura mínima exigida pelo gate |
+| `project_name` | — | Product/service name |
+| `project_slug` | derived | Repository/image name (kebab-case) |
+| `package_name` | derived | Python package (snake_case) |
+| `description` | derived | Short description |
+| `author_name` | `Platform Team` | Owning team |
+| `python_version` | `3.13` | 3.12, 3.13 or 3.14 |
+| `use_postgres` | `true` | SQL repository, Alembic, tests against a real Postgres |
+| `use_redis` | `true` | Cache-aside with Redis |
+| `event_broker` | `kafka` | `kafka`, `rabbit` or `none` (publisher + consumer worker) |
+| `coverage_threshold` | `90` | Minimum coverage required by the gate |
 
-Sem integrações, o serviço usa adapters em memória: o mesmo código roda sem nenhuma
-infraestrutura.
+With no integrations selected, the service uses in-memory adapters: the same code runs with no
+infrastructure at all.
 
-## O SDLC agêntico
+## The agentic SDLC
 
 ```mermaid
 flowchart LR
-  D[1 · Discovery<br/>$discovery] -->|PRD aprovado| S[2 · Specify<br/>$specify]
-  S -->|critérios aprovados| P[3 · Plan<br/>$plan + architect]
-  P -->|plano aprovado| I[4 · Implement<br/>$implement + test_engineer]
-  I -->|make check verde| R[5 · Review<br/>$review + reviewer + security_auditor]
-  R -->|sem bloqueios| SH[6 · Ship<br/>$ship]
-  SH -->|smoke test em produção| M[Medir métricas do PRD]
-  M -.aprendizado.-> D
+  D[1 · Discovery<br/>$discovery] -->|PRD approved| S[2 · Specify<br/>$specify]
+  S -->|criteria approved| P[3 · Plan<br/>$plan + architect]
+  P -->|plan approved| I[4 · Implement<br/>$implement + test_engineer]
+  I -->|make check green| R[5 · Review<br/>$review + reviewer + security_auditor]
+  R -->|no blockers| SH[6 · Ship<br/>$ship]
+  SH -->|production smoke test| M[Measure PRD metrics]
+  M -.learning.-> D
 ```
 
-| Fase | Quem lidera | Artefato | Gate |
+| Phase | Led by | Artifact | Gate |
 |---|---|---|---|
-| **1. Discovery** | Produto + Codex | `docs/product/<slug>.md` (PRD: problema, usuários, métricas, escopo, integrações, riscos) | Problema e métricas aprovados |
-| **2. Specify** | Produto/Tech Lead + Codex | `docs/specs/NNN-<slug>/spec.md` (critérios de aceite Given/When/Then, contratos HTTP/eventos/dados, requisitos não funcionais) | Critérios testáveis aprovados |
-| **3. Plan** | Tech Lead + `architect` | `plan.md` (desenho por camada, modos de falha, AC → teste, tarefas pequenas) + ADRs | Plano aprovado |
-| **4. Implement** | Dev + Codex | Código + testes, uma tarefa por vez, em TDD | `make check` verde, cada AC com teste |
-| **5. Review** | `reviewer` + `security_auditor` + humano | Achados priorizados | Nenhum achado bloqueante |
-| **6. Ship** | CI/CD | PR → CI → staging → produção | Smoke test confirma a versão em produção |
+| **1. Discovery** | Product + Codex | `docs/product/<slug>.md` (PRD: problem, users, metrics, scope, integrations, risks) | Problem and metrics approved |
+| **2. Specify** | Product/Tech Lead + Codex | `docs/specs/NNN-<slug>/spec.md` (Given/When/Then acceptance criteria, HTTP/event/data contracts, non-functional requirements) | Testable criteria approved |
+| **3. Plan** | Tech Lead + `architect` | `plan.md` (design per layer, failure modes, AC → test mapping, small tasks) + ADRs | Plan approved |
+| **4. Implement** | Developer + Codex | Code + tests, one task at a time, TDD | `make check` green, every AC has a test |
+| **5. Review** | `reviewer` + `security_auditor` + human | Ranked findings | No blocking findings |
+| **6. Ship** | CI/CD | PR → CI → staging → production | Smoke test confirms the version in production |
 
-Regra de ouro: **sem spec aprovada, não há código**. Um pedido vago começa em `$specify`, nunca
-em `$implement`. O projeto gerado inclui uma spec de referência (`docs/specs/001-items`) que
-mostra o formato completo, com cada critério de aceite mapeado para o teste que o prova.
+Golden rule: **no approved spec, no code**. A vague request starts at `$specify`, never at
+`$implement`. The generated project includes a reference spec (`docs/specs/001-items`) showing
+the full format, with each acceptance criterion mapped to the test that proves it.
 
-Exemplo de sessão:
+Example session:
 
 ```text
 codex
-> $discovery lojistas precisam importar o catálogo via eventos
-> $specify docs/product/importacao-catalogo.md, fatia 1
-> $plan docs/specs/002-importacao-catalogo/spec.md
-> $implement docs/specs/002-importacao-catalogo/plan.md
+> $discovery merchants need to import their catalog through events
+> $specify docs/product/catalog-import.md, slice 1
+> $plan docs/specs/002-catalog-import/spec.md
+> $implement docs/specs/002-catalog-import/plan.md
 > $review
 > $ship
 ```
 
-## A camada Codex
+## The Codex layer
 
-Todos os arquivos usam os formatos oficiais do Codex: `AGENTS.md`, skills em `.agents/skills/`,
-configuração de projeto em `.codex/config.toml` e subagents em `.codex/agents/*.toml`.
+Every file uses Codex's official formats: `AGENTS.md`, skills in `.agents/skills/`, project
+configuration in `.codex/config.toml` and subagents in `.codex/agents/*.toml`.
 
-| Arquivo | Para que serve |
+| File | Purpose |
 |---|---|
-| `AGENTS.md` | Comandos, fases do SDLC, regras de arquitetura, convenções e guardrails, lidos pelo agente em toda tarefa |
-| `.codex/config.toml` | `approval_policy = on-request`, sandbox `workspace-write`, rede liberada para o uv, limites de subagents |
-| `.agents/skills/discovery` | Entrevista e escreve o PRD (template em `assets/`) |
-| `.agents/skills/specify` | Spec com critérios de aceite e contratos |
-| `.agents/skills/plan` | Plano técnico, tarefas e ADRs |
-| `.agents/skills/implement` | Loop TDD (red → green → refactor → `make check` → commit) |
-| `.agents/skills/integrate` | Receitas para nova tabela/migração, cache, publicar/consumir eventos, API externa |
-| `.agents/skills/review` | Checklist de revisão, executada com dois subagents em paralelo |
-| `.agents/skills/ship` | PR, CI, merge, CD, verificação em produção e rollback |
-| `.codex/agents/architect.toml` | Desenho e ADRs (somente leitura) |
-| `.codex/agents/test_engineer.toml` | Escreve testes que falham a partir dos critérios de aceite |
-| `.codex/agents/reviewer.toml` | Revisão independente contra spec e convenções (somente leitura) |
-| `.codex/agents/security_auditor.toml` | OWASP API Top 10, supply chain, segredos, CI e container (somente leitura) |
-| `.github/workflows/codex-review.yml` | Review automático de PR com `openai/codex-action` (opcional) |
+| `AGENTS.md` | Commands, SDLC phases, architecture rules, conventions and guardrails, read by the agent on every task |
+| `.codex/config.toml` | `approval_policy = on-request`, `workspace-write` sandbox, network enabled for uv, subagent limits |
+| `.agents/skills/discovery` | Interviews and writes the PRD (template in `assets/`) |
+| `.agents/skills/specify` | Spec with acceptance criteria and contracts |
+| `.agents/skills/plan` | Technical plan, tasks and ADRs |
+| `.agents/skills/implement` | TDD loop (red → green → refactor → `make check` → commit) |
+| `.agents/skills/integrate` | Recipes for a new table/migration, cache, publishing/consuming events, external APIs |
+| `.agents/skills/review` | Review checklist, run with two subagents in parallel |
+| `.agents/skills/ship` | PR, CI, merge, CD, production verification and rollback |
+| `.codex/agents/architect.toml` | Design and ADRs (read-only) |
+| `.codex/agents/test_engineer.toml` | Writes failing tests from the acceptance criteria |
+| `.codex/agents/reviewer.toml` | Independent review against spec and conventions (read-only) |
+| `.codex/agents/security_auditor.toml` | OWASP API Top 10, supply chain, secrets, CI and container (read-only) |
+| `.github/workflows/codex-review.yml` | Automated PR review with `openai/codex-action` (opt-in) |
 
-## O serviço gerado
+## The generated service
 
-### Arquitetura hexagonal
+### Hexagonal architecture
 
 ```mermaid
 flowchart TB
   subgraph entrypoints [entrypoints]
     API[FastAPI<br/>/items · /health]
-    W[Worker FastStream<br/>items.import]
+    W[FastStream worker<br/>items.import]
   end
   subgraph application [application]
-    UC[ItemService<br/>casos de uso]
+    UC[ItemService<br/>use cases]
     PO[ports.py<br/>Protocols]
   end
   subgraph domain [domain]
-    DM[Item · ItemCreated<br/>regras puras]
+    DM[Item · ItemCreated<br/>pure rules]
   end
   subgraph adapters [adapters]
     PG[(PostgreSQL)]
@@ -204,175 +205,175 @@ flowchart TB
   W --> UC
   UC --> DM
   UC --> PO
-  PG -.implementa.-> PO
-  RD -.implementa.-> PO
-  BK -.implementa.-> PO
-  MEM -.implementa.-> PO
-  C[container.py<br/>composição] --> adapters
+  PG -.implements.-> PO
+  RD -.implements.-> PO
+  BK -.implements.-> PO
+  MEM -.implements.-> PO
+  C[container.py<br/>composition root] --> adapters
 ```
 
-- `domain/` e `application/` não importam frameworks. O **import-linter** quebra o build se
-  alguém importar `fastapi`, `sqlalchemy`, `redis` etc. nessas camadas.
-- `container.py` é o único lugar que escolhe adapters. Os testes trocam tudo por fakes em memória.
-- O exemplo `Item` exercita todas as integrações. Ele existe para ser substituído pelo seu domínio.
+- `domain/` and `application/` import no frameworks. **import-linter** breaks the build if
+  anyone imports `fastapi`, `sqlalchemy`, `redis`, etc. in those layers.
+- `container.py` is the only place that picks adapters. Tests swap everything for in-memory fakes.
+- The `Item` example exercises every integration. It exists to be replaced by your domain.
 
-### Integrações (fontes e saídas)
+### Integrations (sources and outputs)
 
-| Integração | Direção | Biblioteca | Testada com |
+| Integration | Direction | Library | Tested with |
 |---|---|---|---|
-| API HTTP | entrada / saída | FastAPI + pydantic | TestClient |
-| PostgreSQL | fonte / saída | SQLAlchemy Core async + asyncpg + Alembic | testcontainers |
+| HTTP API | in / out | FastAPI + pydantic | TestClient |
+| PostgreSQL | source / sink | SQLAlchemy Core async + asyncpg + Alembic | testcontainers |
 | Redis | cache (cache-aside) | redis-py asyncio | testcontainers |
-| Kafka / RabbitMQ | eventos de entrada (worker) e saída (`items.created`) | FastStream | TestBroker + testcontainers |
-| APIs de terceiros | saída | httpx (timeouts) + stamina (retry transitório) | respx |
-| Logs | saída | structlog (JSON) + `X-Request-ID` | — |
-| Saúde | saída | `/health/live` (versão) e `/health/ready` (dependências) | TestClient + integração |
+| Kafka / RabbitMQ | inbound events (worker) and outbound (`items.created`) | FastStream | TestBroker + testcontainers |
+| Third-party APIs | out | httpx (timeouts) + stamina (transient retries) | respx |
+| Logs | out | structlog (JSON) + `X-Request-ID` | — |
+| Health | out | `/health/live` (version) and `/health/ready` (dependencies) | TestClient + integration |
 
-### Estrutura do projeto gerado
+### Generated project layout
 
 ```
-meu-servico/
-├── AGENTS.md                      # contrato com agentes
-├── .codex/                        # config do projeto + subagents
-├── .agents/skills/                # skills por fase do SDLC
+my-service/
+├── AGENTS.md                      # contract with agents
+├── .codex/                        # project config + subagents
+├── .agents/skills/                # one skill per SDLC phase
 ├── docs/
-│   ├── ways-of-working.md         # o processo completo
-│   ├── conventions.md             # convenções de código, testes e git
+│   ├── ways-of-working.md         # the full process
+│   ├── conventions.md             # code, testing and git conventions
 │   ├── product/                   # PRDs
 │   ├── specs/NNN-slug/            # spec.md + plan.md
-│   └── adr/                       # decisões de arquitetura
-├── src/<pacote>/
-│   ├── domain/                    # regras de negócio puras
-│   ├── application/               # casos de uso + ports
+│   └── adr/                       # architecture decision records
+├── src/<package>/
+│   ├── domain/                    # pure business rules
+│   ├── application/               # use cases + ports
 │   ├── adapters/                  # postgres, redis, broker, http, memory
 │   ├── entrypoints/               # http/ (FastAPI), worker.py (FastStream)
-│   ├── container.py               # composição
+│   ├── container.py               # composition root
 │   ├── config.py                  # Settings (APP_*)
 │   └── observability.py           # structlog
 ├── tests/{unit,api,integration}/
 ├── migrations/                    # Alembic
-├── scripts/{smoke.py,deploy.sh}   # verificação pós-deploy e contrato de deploy
-├── Makefile                       # interface única para humanos, agentes e CI
+├── scripts/{smoke.py,deploy.sh}   # post-deploy verification and deploy contract
+├── Makefile                       # single interface for humans, agents and CI
 ├── compose.yaml · Dockerfile
-└── .github/                       # CI, CD, release, review Codex, Dependabot, templates
+└── .github/                       # CI, CD, release, Codex review, Dependabot, templates
 ```
 
-### Comandos (`make help`)
+### Commands (`make help`)
 
-| Comando | O que faz |
+| Command | What it does |
 |---|---|
-| `make setup` | Instala dependências e git hooks |
-| `make test-unit` | Testes unitários e de API, sem Docker (segundos) |
-| `make fmt` | Formata e corrige lint automaticamente |
-| `make check` | **Definition of Done**: lint, mypy, arquitetura, auditoria e testes com cobertura |
-| `make run` / `make worker` | API com reload / consumidor de eventos |
-| `make up` / `make down` | Ambiente completo em Docker |
-| `make migration m="..."` / `make migrate` | Cria / aplica migrações |
-| `make image` | Build da imagem |
-| `make smoke url=... version=...` | Verifica um deploy |
+| `make setup` | Install dependencies and git hooks |
+| `make test-unit` | Unit and API tests, no Docker (seconds) |
+| `make fmt` | Format and auto-fix lint |
+| `make check` | **Definition of Done**: lint, mypy, architecture, audit and tests with coverage |
+| `make run` / `make worker` | API with reload / event consumer |
+| `make up` / `make down` | Full environment in Docker |
+| `make migration m="..."` / `make migrate` | Create / apply migrations |
+| `make image` | Build the image |
+| `make smoke url=... version=...` | Verify a deployment |
 
-## Qualidade e segurança
+## Quality and security
 
-| Preocupação | Ferramenta | Onde roda |
+| Concern | Tool | Where it runs |
 |---|---|---|
-| PEP 8, PEP 257, bugs comuns, complexidade ≤ 8 | Ruff (lint + format) | pre-commit, `make check`, CI |
-| Tipagem | mypy `--strict` | pre-commit, `make check`, CI |
-| Arquitetura | import-linter | pre-commit, `make check`, CI |
-| Testes e cobertura | pytest, pytest-cov, testcontainers, respx | `make check`, CI |
-| Vulnerabilidades em dependências | pip-audit sobre o lockfile completo, Dependabot | `make check`, CI, semanal |
-| Código inseguro | Ruff `S` (regras do Bandit) | pre-commit, CI |
-| Segredos | gitleaks | pre-commit, CI |
-| Segurança dos workflows | zizmor, actions fixadas por SHA, permissões mínimas | CI |
-| Imagem | Trivy, base slim, usuário não-root, provenance attestation | CI, CD |
-| Revisão | subagents `reviewer` + `security_auditor`, Codex review no PR, humano | `$review`, PR |
+| PEP 8, PEP 257, common bugs, complexity ≤ 8 | Ruff (lint + format) | pre-commit, `make check`, CI |
+| Typing | mypy `--strict` | pre-commit, `make check`, CI |
+| Architecture | import-linter | pre-commit, `make check`, CI |
+| Tests and coverage | pytest, pytest-cov, testcontainers, respx | `make check`, CI |
+| Dependency vulnerabilities | pip-audit over the full lockfile, Dependabot | `make check`, CI, weekly |
+| Insecure code | Ruff `S` (Bandit rules) | pre-commit, CI |
+| Secrets | gitleaks | pre-commit, CI |
+| Workflow security | zizmor, actions pinned by SHA, least-privilege permissions | CI |
+| Container image | Trivy, slim base, non-root user, provenance attestation | CI, CD |
+| Review | `reviewer` + `security_auditor` subagents, Codex PR review, human | `$review`, PR |
 
-O `AGENTS.md` proíbe explicitamente desabilitar testes, regras ou checagens para "ficar verde".
+`AGENTS.md` explicitly forbids disabling tests, rules or checks to "get green".
 
-## CI/CD: do merge à produção verificada
+## CI/CD: from merge to verified production
 
 ```mermaid
 flowchart LR
   PR[Pull request] --> CI[ci.yml<br/>quality · test · security<br/>image + Trivy · PR title]
   CI -->|squash merge| M[main]
   M --> CD[cd.yml]
-  CD --> CI2[CI de novo]
+  CD --> CI2[CI again]
   CI2 --> B[Build + push GHCR<br/>:sha + attestation]
   B --> ST[Deploy staging]
-  ST --> V1{smoke.py<br/>versão = SHA?<br/>ready = 200?}
-  V1 -->|sim| PA[Aprovação<br/>production]
-  V1 -->|não| RB1[rollback]
+  ST --> V1{smoke.py<br/>version = SHA?<br/>ready = 200?}
+  V1 -->|yes| PA[Approval<br/>production]
+  V1 -->|no| RB1[rollback]
   PA --> PD[Deploy production]
   PD --> V2{smoke.py}
-  V2 -->|sim| OK[✅ em produção]
-  V2 -->|não| RB2[rollback]
+  V2 -->|yes| OK[✅ live in production]
+  V2 -->|no| RB2[rollback]
 ```
 
-- **`ci.yml`**: roda em todo PR e é reutilizado pelo CD, então nada chega em produção sem
-  passar pelos mesmos gates.
-- **`cd.yml` + `deploy.yml`**: a imagem recebe a versão (`APP_VERSION = SHA do commit`). Depois
-  do deploy, `scripts/smoke.py` consulta `/health/live` até ver exatamente esse SHA e exige
-  `/health/ready = 200`. Se falhar, executa `scripts/deploy.sh rollback`.
-- **`release.yml`**: o release-please gera versionamento semântico e CHANGELOG a partir de
+- **`ci.yml`**: runs on every PR and is reused by CD, so nothing reaches production without
+  passing the same gates.
+- **`cd.yml` + `deploy.yml`**: the image carries its version (`APP_VERSION = commit SHA`). After
+  each deploy, `scripts/smoke.py` polls `/health/live` until it reports exactly that SHA and
+  requires `/health/ready = 200`. If it fails, it runs `scripts/deploy.sh rollback`.
+- **`release.yml`**: release-please produces semantic versions and a CHANGELOG from
   Conventional Commits.
-- **`codex-review.yml`**: review do Codex comentado no PR (opt-in).
+- **`codex-review.yml`**: Codex review posted as a PR comment (opt-in).
 
-## Configuração pós-geração
+## Post-generation setup
 
-1. Crie o repositório no GitHub e faça o push.
-2. Proteja a `main`: PR obrigatório, checks do CI obrigatórios, squash merge.
-3. Crie os **Environments** `staging` e `production` (production com *required reviewers*). Em
-   cada um, defina a variável `APP_URL` e o segredo `KUBECONFIG_DATA` (kubeconfig em base64).
-   Os jobs de deploy ficam desligados até `APP_URL` existir.
-4. Plataforma diferente de Kubernetes? Adapte as funções `deploy` e `rollback` de
-   `scripts/deploy.sh` (ECS, Cloud Run, Fly.io...), mantendo o contrato.
-5. Opcional: segredo `OPENAI_API_KEY` e variável `CODEX_REVIEW=true` para o review automático.
-6. No Codex, marque o projeto como confiável para carregar `.codex/config.toml` e os subagents.
+1. Create the GitHub repository and push.
+2. Protect `main`: required PRs, required CI checks, squash merge.
+3. Create the **Environments** `staging` and `production` (production with *required
+   reviewers*). In each one, set the `APP_URL` variable and the `KUBECONFIG_DATA` secret
+   (base64 kubeconfig). Deploy jobs stay disabled until `APP_URL` exists.
+4. Not on Kubernetes? Adapt the `deploy` and `rollback` functions in `scripts/deploy.sh` (ECS,
+   Cloud Run, Fly.io...) while keeping the contract.
+5. Optional: `OPENAI_API_KEY` secret and `CODEX_REVIEW=true` variable for the automated review.
+6. In Codex, mark the project as trusted so it loads `.codex/config.toml` and the subagents.
 
-## Estrutura deste repositório
+## Repository layout
 
 ```
 codex-harness-template/
-├── copier.yml                     # perguntas do template
-├── template/                      # tudo que é renderizado no novo projeto
-├── .agents/skills/new-service/    # agente de scaffolding ($new-service)
-├── tests/test_template.py         # renderiza 4 cenários e valida
+├── copier.yml                     # template questions
+├── template/                      # everything rendered into the new project
+├── .agents/skills/new-service/    # scaffolding agent ($new-service)
+├── tests/test_template.py         # renders 4 scenarios and validates them
 ├── .github/workflows/template-ci.yml
-├── AGENTS.md                      # regras para quem (humano ou agente) mantém o template
-└── pyproject.toml                 # ferramentas de desenvolvimento do template
+├── AGENTS.md                      # rules for whoever (human or agent) maintains the template
+└── pyproject.toml                 # tooling to develop the template
 ```
 
-Arquivos `*.jinja` são renderizados. Arquivos e pastas condicionais usam nomes como
-`{% if use_postgres %}postgres.py{% endif %}.jinja`, e o arquivo some quando a opção está
-desligada.
+`*.jinja` files are rendered. Conditional files and folders use names such as
+`{% if use_postgres %}postgres.py{% endif %}.jinja`, so the file disappears when the option is
+off.
 
-## Desenvolvendo o template
+## Developing the template
 
 ```bash
 uv sync
-uv run pytest            # renderiza 4 cenários e valida a estrutura (segundos)
-uv run pytest -m slow    # + `make check` completo dentro de cada projeto gerado (precisa de Docker)
+uv run pytest            # renders 4 scenarios and validates their layout (seconds)
+uv run pytest -m slow    # + full `make check` inside each generated project (needs Docker)
 ```
 
-| Cenário | Postgres | Redis | Broker |
+| Scenario | Postgres | Redis | Broker |
 |---|---|---|---|
 | `full-kafka` | ✅ | ✅ | Kafka |
 | `minimal` | — | — | — |
 | `postgres-rabbit` | ✅ | — | RabbitMQ |
 | `redis-only` | — | ✅ | — |
 
-O CI do template (`template-ci.yml`) roda a mesma matriz. Toda nova opção no `copier.yml` exige
-um novo cenário. Leia o [`AGENTS.md`](AGENTS.md) antes de alterar o template.
+The template's CI (`template-ci.yml`) runs the same matrix. Every new option in `copier.yml`
+requires a new scenario. Read [`AGENTS.md`](AGENTS.md) before changing the template.
 
-## Decisões e princípios
+## Principles
 
-- **Enxuto**: só o que foi escolhido é gerado; Makefile como interface única; nenhuma
-  infraestrutura caseira.
-- **Clean code verificável**: complexidade limitada, tipos estritos e camadas checadas por
-  ferramenta, não por boa vontade.
-- **Spec-driven**: critérios de aceite são o contrato entre produto, agente e testes.
-- **Humano no controle**: agentes produzem, humanos aprovam em cada gate.
-- **Produção é a definição de pronto**: "feito" significa que o smoke test confirmou a versão em
-  produção.
+- **Lean**: only what you choose is generated; the Makefile is the single interface; no
+  home-grown infrastructure.
+- **Verifiable clean code**: complexity limits, strict types and layering enforced by tools,
+  not goodwill.
+- **Spec-driven**: acceptance criteria are the contract between product, agent and tests.
+- **Humans in control**: agents produce, humans approve at every gate.
+- **Production is the definition of done**: "done" means the smoke test confirmed the version in
+  production.
 
-As decisões técnicas do serviço gerado estão em `template/docs/adr/`, e o processo completo em
-[`template/docs/ways-of-working.md`](template/docs/ways-of-working.md).
+Technical decisions for the generated service live in `template/docs/adr/`, and the full process
+in [`template/docs/ways-of-working.md`](template/docs/ways-of-working.md) (Portuguese).

@@ -1,0 +1,19 @@
+# AGENTS.md — codex-harness-template
+
+This repository is a **Copier template** that generates Python service repositories with an
+agentic SDLC for Codex. It is not an application.
+
+- `copier.yml` — questions. `template/` — everything rendered into new projects (`*.jinja` files
+  are rendered; conditional files/dirs use `{% if ... %}name{% endif %}`).
+- `.agents/skills/new-service/` — skill that scaffolds a new service (`$new-service`).
+- `tests/test_template.py` — renders 4 answer sets and asserts layout; `-m slow` also runs
+  `make check` inside each generated project (needs Docker).
+
+## Rules when changing the template
+- Generated code must pass its own gates for **every** scenario: `uv run pytest -m slow`.
+  Watch Jinja whitespace (`{%-`): ruff format/isort failures usually come from it.
+- Keep generated projects lean: prefer standard library and already-chosen libraries
+  (template/docs/adr/0002). New option in `copier.yml` ⇒ new scenario in `tests/test_template.py`.
+- Workflows in `template/.github/workflows` pin actions by commit SHA and use least privilege;
+  validate with `uvx zizmor --offline template/.github/workflows` and actionlint.
+- Agent-facing files (AGENTS.md, skills, subagents) are English; human docs are Portuguese.

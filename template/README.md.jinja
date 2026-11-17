@@ -1,0 +1,67 @@
+# {{ project_name }}
+
+{{ description }}.
+
+Python {{ python_version }} · FastAPI · arquitetura hexagonal
+{%- if use_postgres %} · PostgreSQL{% endif %}
+{%- if use_redis %} · Redis{% endif %}
+{%- if event_broker == 'kafka' %} · Kafka{% elif event_broker == 'rabbit' %} · RabbitMQ{% endif %}
+ · pronto para desenvolvimento assistido pelo **Codex**.
+
+## Começando
+
+Pré-requisitos: [uv](https://docs.astral.sh/uv/), Docker, make e (opcional) [Codex CLI](https://developers.openai.com/codex).
+
+```bash
+make setup        # dependências + git hooks
+make test-unit    # feedback rápido, sem Docker
+make check        # gate completo: lint, tipos, arquitetura, auditoria, testes + cobertura
+make up           # app + infraestrutura em Docker → http://localhost:8000/docs
+```
+
+{% if use_postgres or use_redis or event_broker != 'none' -%}
+Loop de desenvolvimento: `cp .env.example .env`, suba só a infraestrutura com
+`docker compose up -d --wait{% if use_postgres %} postgres{% endif %}{% if use_redis %} redis{% endif %}{% if event_broker != 'none' %} broker{% endif %}`
+{%- if use_postgres %}, `make migrate`{% endif %} e rode `make run`{% if event_broker != 'none' %} / `make worker`{% endif %}.
+{%- else -%}
+Loop de desenvolvimento: `cp .env.example .env` e `make run` (adapters em memória, sem infraestrutura).
+{%- endif %}
+`make help` lista todos os comandos.
+
+## Como trabalhamos
+
+O fluxo completo — da descoberta do produto até a verificação em produção — está em
+[`docs/ways-of-working.md`](docs/ways-of-working.md). Resumo:
+
+| Fase | Skill do Codex | Artefato |
+|---|---|---|
+| Discovery | `$discovery` | `docs/product/` |
+| Especificação | `$specify` | `docs/specs/NNN-*/spec.md` |
+| Plano/ADR | `$plan` | `plan.md`, `docs/adr/` |
+| Implementação | `$implement`, `$integrate` | código + testes |
+| Revisão | `$review` | PR |
+| Entrega | `$ship` | CI/CD → produção verificada |
+
+Regras para agentes e pessoas: [`AGENTS.md`](AGENTS.md) · Convenções: [`docs/conventions.md`](docs/conventions.md).
+
+## Estrutura
+
+```
+src/{{ package_name }}/
+  domain/          regras de negócio puras
+  application/     casos de uso + ports (Protocols)
+  adapters/        Postgres, Redis, broker, HTTP, memória
+  entrypoints/     API HTTP{% if event_broker != 'none' %}, worker de eventos{% endif %}
+  container.py     composição (escolha dos adapters)
+  config.py        settings (APP_*)
+tests/{unit,api,integration}
+docs/{product,specs,adr}
+.agents/skills/    skills do Codex por fase do SDLC
+.codex/            config do projeto + subagents
+```
+
+## Entrega
+
+`main` é sempre implantável: cada merge gera imagem em `ghcr.io`, faz deploy em staging e
+produção e **verifica** que a versão (SHA) está no ar e saudável — senão faz rollback. Configuração
+em [`docs/ways-of-working.md#entrega-cicd`](docs/ways-of-working.md#entrega-cicd).

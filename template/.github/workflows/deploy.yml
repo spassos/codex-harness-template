@@ -1,0 +1,50 @@
+# Reusable deploy: roll out, then *prove* the release is live (version + readiness), else roll back.
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      image:
+        type: string
+        required: true
+    secrets:
+      # Resolved from the GitHub Environment secrets of the job below.
+      KUBECONFIG_DATA:
+        required: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    # Skipped until the GitHub Environment defines the APP_URL variable.
+    if: vars.APP_URL != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.APP_URL }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      IMAGE: ${{ inputs.image }}
+      KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_DATA }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Roll out
+        run: scripts/deploy.sh deploy
+      - name: Verify the release is live and ready
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: python3 scripts/smoke.py --url "$APP_URL" --version "$GITHUB_SHA"
+      - name: Roll back
+        if: failure()
+        run: scripts/deploy.sh rollback

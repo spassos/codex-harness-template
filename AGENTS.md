@@ -6,8 +6,9 @@ agentic SDLC for Codex. It is not an application.
 - `copier.yml` — questions. `template/` — everything rendered into new projects (`*.jinja` files
   are rendered; conditional files/dirs use `{% if ... %}name{% endif %}`).
 - `.agents/skills/new-service/` — skill that scaffolds a new service (`$new-service`).
-- `tests/test_template.py` — renders 4 answer sets and asserts layout; `-m slow` also runs
-  `make check` inside each generated project (needs Docker).
+- `tests/test_template.py` — renders four scenarios and checks their layout. Use `-m smoke`
+  for CLI generation and a live HTTP smoke test. Use `-m slow` for `make check` in each
+  generated project (Docker for integration scenarios).
 
 ## Rules when changing the template
 - Generated code must pass its own gates for **every** scenario: `uv run pytest -m slow`.

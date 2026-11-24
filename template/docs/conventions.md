@@ -42,4 +42,4 @@ AAA, um comportamento por teste, nome descreve o comportamento, sem `sleep`, sem
 ## Git
 - Trunk-based: branches curtas `feat/NNN-slug`, `fix/...`; squash merge.
 - Conventional Commits no título do PR (gera versão e CHANGELOG).
-- Um PR = uma spec (ou uma task grande); PRs pequenos (< ~400 linhas).
+- Um PR por mudança focada. Vincule o pedido e o teste de regressão para correções locais, ou a spec para mudanças planejadas.

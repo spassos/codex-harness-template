@@ -15,6 +15,9 @@ line-length = 110
 extend-exclude = ["template"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --strict-markers -m 'not slow'"
+addopts = "-ra --strict-markers -m 'not slow and not smoke'"
 testpaths = ["tests"]
-markers = ["slow: renders and runs `make check` in each generated project (needs Docker)"]
+markers = [
+    "slow: runs make check in each generated project (Docker for integration profiles)",
+    "smoke: generates and exercises the default API over HTTP without Docker",
+]

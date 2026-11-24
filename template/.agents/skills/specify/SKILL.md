@@ -1,6 +1,6 @@
 ---
 name: specify
-description: Write a testable feature spec (acceptance criteria, API/event contracts, non-functional requirements) in docs/specs/NNN-slug/spec.md from an approved PRD or a clear request. Use for "spec", "especificação", "critérios de aceite", "user story", or before implementing anything without a spec.
+description: Write a testable feature spec (acceptance criteria, API/event contracts, non-functional requirements) in docs/specs/NNN-slug/spec.md from an approved PRD or a clear request. Use for "spec", "especificação", "critérios de aceite", "user story", or when a public contract, migration or architectural decision needs an approved spec.
 ---
 
 # Specify → spec.md

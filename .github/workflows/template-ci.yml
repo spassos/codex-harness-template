@@ -21,6 +21,8 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run pytest
+      - name: Generate and start the default API
+        run: uv run pytest -m smoke
       - name: Generated workflows security (zizmor)
         run: uvx zizmor --offline --min-severity medium template/.github/workflows .github/workflows
 

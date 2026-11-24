@@ -1,26 +1,25 @@
 ---
 name: implement
-description: Implement an approved plan task by task with TDD, clean code and the hexagonal layering, keeping `make check` green. Use for "implement", "implementar", "codar", "fix", or when executing tasks from docs/specs/NNN-*/plan.md.
+description: Implement a clearly requested local fix or an approved plan with tests, hexagonal layering, and make check. Use for "implement", "implementar", "codar", "fix", or when executing tasks from docs/specs/NNN-*/plan.md.
 ---
 
-# Implement (TDD loop)
+# Implement
 
-Precondition: an approved `spec.md` + `plan.md`. Bug fix without a spec? Write a failing test that
-reproduces it first, then follow the same loop.
+For a clearly requested local fix, take the expected behavior from the request and start with a
+regression test. For changes to a public contract, a migration, or an architectural decision,
+wait for an approved spec and plan, then work through the unchecked tasks in order.
 
-For **each** unchecked task in `plan.md`, in order:
+For the fix or each planned task:
 
-1. **Red** — write the tests for the task's acceptance criteria (or delegate to the
-   `test_engineer` subagent). Run `make test-unit` and see them fail for the right reason.
-2. **Green** — write the minimum code to pass, inside the right layer:
-   - business rule → `domain/`; orchestration → `application/` through ports;
-   - I/O → `adapters/` (new external system? follow `$integrate`);
-   - HTTP/consumer → `entrypoints/` (pydantic schemas there, map domain errors to status codes);
-   - wiring → `container.py` only.
-3. **Refactor** — remove duplication, name things after the domain, keep functions small. No
-   speculative abstractions, no dead code, no commented-out code.
-4. **Gate** — `make fmt && make check`. Fix root causes; never suppress a rule or lower coverage.
-5. Tick the task in `plan.md` and commit: `git commit -m "feat(<scope>): <what> (NNN T<n>)"`.
-
-Before handing off: every AC has a passing test, `make check` is green, docs touched by the change
-(README, spec contracts, ADRs) are updated. Next: `$review`.
+1. **Red** — write a test that reproduces the problem or proves the acceptance criterion. Run
+   `make test-unit` for unit and API tests, or the relevant integration test, and check that it
+   fails for the expected reason. Use the `test_engineer` subagent when independent test design helps.
+2. **Green** — make the smallest change in the appropriate layer. Business rules go in
+   `domain/`, orchestration in `application/`, I/O in `adapters/`, and transport contracts in
+   `entrypoints/`. Add new integrations with `$integrate`. Select adapters in `container.py`.
+3. **Refactor** — remove duplication and keep names and functions clear.
+4. **Verify** — run `make check` and fix any failures caused by the change. Keep the quality
+   rules and coverage threshold in place.
+5. **Hand off** — report the regression test or acceptance criteria covered, the checks run, and
+   any blockers. For planned work, update task status in `plan.md` and the affected documentation,
+   and commit the completed task with its spec and task identifiers. Use `$review` for review.

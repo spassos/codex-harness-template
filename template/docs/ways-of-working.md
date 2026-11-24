@@ -1,8 +1,11 @@
 # Ways of Working — SDLC agêntico
 
-Humanos decidem **o quê** e **se está bom**; agentes (Codex) aceleram **o como**. Cada fase tem um
-artefato versionado no repositório, uma skill do Codex que o produz e um gate que impede avançar
-sem aprovação.
+Para uma correção local com resultado definido, comece em `$implement`. Use o pedido e o teste
+de regressão como referência de `$review` e valide com `make check`.
+
+Mudanças de contrato público, migrações e decisões arquiteturais passam por `$specify` e
+`$plan` com aprovação. Comece com `$discovery` quando o problema ou o resultado de produto
+precisar ser definido. O fluxo completo abaixo mostra os artefatos e as verificações de cada fase.
 
 ```mermaid
 flowchart LR

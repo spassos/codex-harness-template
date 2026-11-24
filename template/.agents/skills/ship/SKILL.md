@@ -5,7 +5,7 @@ description: Deliver a reviewed change to production — branch, Conventional Co
 
 # Ship → production verified
 
-1. Branch `feat/NNN-<slug>` (or `fix/...`). `make check` green locally.
+1. Use `fix/<slug>` for a local fix or `feat/NNN-<slug>` for a planned feature. Run `make check` locally.
 2. Open a PR with `.github/pull_request_template.md` filled in; title in Conventional Commits
    (`feat(items): ...`) — it becomes the squash commit and drives the version bump.
 3. CI must be green: quality (ruff, mypy, import-linter), tests + coverage, security (pip-audit,
@@ -17,7 +17,7 @@ description: Deliver a reviewed change to production — branch, Conventional Co
    `/health/ready` is 200 → **production** (GitHub Environment approval) → same verification →
    automatic `scripts/deploy.sh rollback` if verification fails.
 6. Watch the run (`gh run watch` or the Actions tab). Done = production smoke test green.
-   Then check the PRD metrics/logs for the feature and update the spec status to `Shipped`.
+   Check the product metrics if defined for the change. Update the spec status to `Shipped` for planned work.
 7. release-please keeps a release PR with the CHANGELOG; merging it tags a semantic version.
 
 Incident? Roll back first (`scripts/deploy.sh rollback` or revert commit → CD), investigate after.

@@ -66,20 +66,23 @@ flowchart LR
 
 ## Quick start
 
-**Prerequisites:** [uv](https://docs.astral.sh/uv/), Docker, `make`, Git and, optionally, the
-[Codex CLI](https://developers.openai.com/codex).
+**Prerequisites** are [uv](https://docs.astral.sh/uv/), `make`, Git and optionally the
+[Codex CLI](https://developers.openai.com/codex). The default API uses in-memory storage and runs
+without Docker. Install Docker if you select external integrations or want to run the app in a container.
 
 ### Option 1 — Copier (interactive)
 
 ```bash
 uvx copier copy gh:spassos/codex-harness-template my-service
 cd my-service
-make setup   # install dependencies and git hooks
-make check   # lint, types, architecture, audit, tests (with Docker) and coverage
-make up      # start app + infrastructure → http://localhost:8000/docs
+make bootstrap   # initialize Git and install dependencies
+make run         # start the API → http://localhost:8000/docs
 ```
 
-### Option 2 — Copier (non-interactive)
+Run `make test-unit` for fast feedback and `make check` for the full quality gate.
+Use `make setup` to install Git hooks and `make up` to start the app with Docker Compose.
+
+### Option 2 — Copier (non-interactive with optional integrations)
 
 ```bash
 uvx copier copy --defaults gh:spassos/codex-harness-template my-service \
@@ -95,9 +98,8 @@ Clone this repository, open `codex` in it and ask:
 $new-service create an orders service with Postgres and Kafka
 ```
 
-The [`new-service`](.agents/skills/new-service/SKILL.md) skill interviews you, renders the
-template, runs `make check` on the result, makes the initial commit and suggests starting
-`$discovery`.
+The [`new-service`](.agents/skills/new-service/SKILL.md) skill uses the requested integrations,
+renders the template, runs `make bootstrap` and `make check`, then creates the initial local commit.
 
 ### Template questions
 
@@ -109,9 +111,9 @@ template, runs `make check` on the result, makes the initial commit and suggests
 | `description` | derived | Short description |
 | `author_name` | `Platform Team` | Owning team |
 | `python_version` | `3.13` | 3.12, 3.13 or 3.14 |
-| `use_postgres` | `true` | SQL repository, Alembic, tests against a real Postgres |
-| `use_redis` | `true` | Cache-aside with Redis |
-| `event_broker` | `kafka` | `kafka`, `rabbit` or `none` (publisher + consumer worker) |
+| `use_postgres` | `false` | SQL repository, Alembic, tests against a real Postgres |
+| `use_redis` | `false` | Cache-aside with Redis |
+| `event_broker` | `none` | `kafka`, `rabbit` or `none` (publisher + consumer worker) |
 | `coverage_threshold` | `90` | Minimum coverage required by the gate |
 
 With no integrations selected, the service uses in-memory adapters: the same code runs with no
@@ -139,9 +141,10 @@ flowchart LR
 | **5. Review** | `reviewer` + `security_auditor` + human | Ranked findings | No blocking findings |
 | **6. Ship** | CI/CD | PR → CI → staging → production | Smoke test confirms the version in production |
 
-Golden rule: **no approved spec, no code**. A vague request starts at `$specify`, never at
-`$implement`. The generated project includes a reference spec (`docs/specs/001-items`) showing
-the full format, with each acceptance criterion mapped to the test that proves it.
+A clearly scoped local fix starts at `$implement`, with a regression test and `make check`.
+Changes to public contracts, migrations and architectural decisions require an approved spec and
+plan. Start at `$discovery` if the problem or product outcome needs definition. The generated
+reference spec (`docs/specs/001-items`) shows how planned changes map acceptance criteria to tests.
 
 Example session:
 
@@ -262,7 +265,8 @@ my-service/
 
 | Command | What it does |
 |---|---|
-| `make setup` | Install dependencies and git hooks |
+| `make bootstrap` | Initialize Git and install dependencies |
+| `make setup` | Install dependencies and Git hooks |
 | `make test-unit` | Unit and API tests, no Docker (seconds) |
 | `make fmt` | Format and auto-fix lint |
 | `make check` | **Definition of Done**: lint, mypy, architecture, audit and tests with coverage |
@@ -351,7 +355,8 @@ off.
 ```bash
 uv sync
 uv run pytest            # renders 4 scenarios and validates their layout (seconds)
-uv run pytest -m slow    # + full `make check` inside each generated project (needs Docker)
+uv run pytest -m smoke   # generates and runs the default API, then exercises it over HTTP
+uv run pytest -m slow    # full `make check` for generated projects (Docker for integrations)
 ```
 
 | Scenario | Postgres | Redis | Broker |

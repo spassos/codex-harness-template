@@ -45,12 +45,12 @@ python_version:
 use_postgres:
   type: bool
   help: 'Banco relacional PostgreSQL (SQLAlchemy async + Alembic)?'
-  default: true
+  default: false
 
 use_redis:
   type: bool
   help: 'Cache Redis (cache-aside)?'
-  default: true
+  default: false
 
 event_broker:
   type: str
@@ -59,7 +59,7 @@ event_broker:
     Nenhum: none
     Kafka: kafka
     RabbitMQ: rabbit
-  default: kafka
+  default: none
 
 coverage_threshold:
   type: int

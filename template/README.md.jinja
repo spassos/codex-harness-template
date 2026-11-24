@@ -10,28 +10,35 @@ Python {{ python_version }} · FastAPI · arquitetura hexagonal
 
 ## Começando
 
-Pré-requisitos: [uv](https://docs.astral.sh/uv/), Docker, make e (opcional) [Codex CLI](https://developers.openai.com/codex).
+Pré-requisitos: [uv](https://docs.astral.sh/uv/), Git, make e (opcional) [Codex CLI](https://developers.openai.com/codex).
+{% if use_postgres or use_redis or event_broker != 'none' -%}
+Este perfil usa Docker e Docker Compose.
 
 ```bash
-make setup        # dependências + git hooks
-make test-unit    # feedback rápido, sem Docker
-make check        # gate completo: lint, tipos, arquitetura, auditoria, testes + cobertura
-make up           # app + infraestrutura em Docker → http://localhost:8000/docs
+make bootstrap    # inicializa Git e resolve dependências
+make up           # app + infraestrutura em Docker
 ```
 
-{% if use_postgres or use_redis or event_broker != 'none' -%}
-Loop de desenvolvimento: `cp .env.example .env`, suba só a infraestrutura com
+Para rodar a API com reload, copie `.env.example` para `.env`, suba só a infraestrutura com
 `docker compose up -d --wait{% if use_postgres %} postgres{% endif %}{% if use_redis %} redis{% endif %}{% if event_broker != 'none' %} broker{% endif %}`
-{%- if use_postgres %}, `make migrate`{% endif %} e rode `make run`{% if event_broker != 'none' %} / `make worker`{% endif %}.
-{%- else -%}
-Loop de desenvolvimento: `cp .env.example .env` e `make run` (adapters em memória, sem infraestrutura).
-{%- endif %}
-`make help` lista todos os comandos.
+{%- if use_postgres %}, execute `make migrate`{% endif %} e rode `make run`{% if event_broker != 'none' %} e `make worker`{% endif %} em terminais separados quando necessário.
+{% else %}
+A API usa armazenamento em memória e roda sem Docker.
+
+```bash
+make bootstrap    # inicializa Git e resolve dependências
+make run          # inicia a API com reload
+```
+{% endif %}
+Abra a documentação em http://localhost:8000/docs. Use `make test-unit` para feedback rápido e
+`make check` para lint, tipos, arquitetura, auditoria, testes e cobertura. Para instalar os hooks
+locais, use `make setup`. `make help` lista todos os comandos.
 
 ## Como trabalhamos
 
-O fluxo completo — da descoberta do produto até a verificação em produção — está em
-[`docs/ways-of-working.md`](docs/ways-of-working.md). Resumo:
+Para uma correção local bem definida, comece em `$implement` com um teste de regressão. Mudanças
+de contrato público, migrações e decisões arquiteturais passam por especificação e plano aprovados.
+O fluxo completo está em [`docs/ways-of-working.md`](docs/ways-of-working.md).
 
 | Fase | Skill do Codex | Artefato |
 |---|---|---|

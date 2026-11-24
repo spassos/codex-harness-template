@@ -9,10 +9,13 @@ APP := {{ package_name }}.entrypoints.http.app:create_app
 help: ## List targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: setup
-setup: ## Install deps and git hooks
-	@test -d .git || git init -q -b main
+.PHONY: bootstrap
+bootstrap: ## Initialize Git and install dependencies
+	@test -e .git || git init -q -b main
 	uv sync --all-groups
+
+.PHONY: setup
+setup: bootstrap ## Install dependencies and Git hooks
 	$(UV) pre-commit install --install-hooks
 
 .PHONY: fmt

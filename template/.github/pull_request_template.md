@@ -1,21 +1,21 @@
 ## O quê e por quê
 <!-- Uma ou duas frases. -->
 
-Spec: `docs/specs/NNN-.../spec.md` · Plano: `.../plan.md` · ADR: <!-- se houver -->
+<!-- Correção local: referencie o pedido e o teste de regressão. Mudança planejada: vincule a spec, o plano e a ADR (se houver). -->
 
 ## Critérios de aceite
-| AC | Teste |
+| Comportamento esperado | Teste |
 |---|---|
-| AC-1 | `tests/...::test_...` |
+| <!-- Critério da spec ou comportamento corrigido --> | `tests/...::test_...` |
 
 ## Checklist (Definition of Done)
 - [ ] `make check` verde localmente
-- [ ] Cada critério de aceite tem teste
-- [ ] Contratos (API/eventos/dados) documentados na spec e compatíveis (ou versionados)
-- [ ] Migrações reversíveis ou expand/contract
+- [ ] Teste de regressão ou testes para os critérios de aceite
+- [ ] Alterações de contrato, se houver, documentadas na spec e compatíveis (ou versionadas)
+- [ ] Migrações, se houver, reversíveis ou com expand/contract
 - [ ] Sem segredos/PII em código, logs ou fixtures
 - [ ] Docs/ADRs atualizados
-- [ ] `$review` executado (reviewer + security_auditor) sem bloqueios
+- [ ] `$review` executado sem bloqueios
 
 ## Riscos e rollout
 <!-- Feature flag? Ordem de deploy? Plano de rollback? -->

@@ -1,16 +1,16 @@
 ---
 name: review
-description: Review the current change against its spec, conventions, security and Definition of Done, using the reviewer and security_auditor subagents in parallel, then fix blocking findings. Use for "review", "revisão", "code review", "security review", or before opening/merging a PR.
+description: Review the current change against the request or approved spec, conventions, security and Definition of Done, then fix blocking findings. Use for "review", "revisão", "code review", "security review", or before opening/merging a PR.
 ---
 
 # Review
 
-1. Run `make check`. Red → fix first; reviewing a red build wastes time.
-2. Spawn in parallel and wait for both:
-   - `reviewer` — spec coverage, correctness, design, tests.
-   - `security_auditor` — dependencies (`make audit` output), OWASP API Top 10, secrets, CI/container.
+1. Run `make check` and investigate failures before handing off.
+2. Review a local fix against the request and regression test. For planned work, inspect the
+   approved spec and plan. Ask the `reviewer` for independent correctness review or the
+   `security_auditor` for independent security review when the change warrants it.
 3. Checklist (the reviewers use it too):
-   - [ ] Every AC of the spec has a test that would fail without the change.
+   - [ ] The regression test fails without the fix, or each acceptance criterion has a test that fails without the change.
    - [ ] Layering respected (`make arch`); domain/application framework-free; wiring only in `container.py`.
    - [ ] Inputs validated at the edge; domain errors mapped to correct status codes; no stack traces leaked.
    - [ ] Every network call has a timeout; retries only on idempotent operations; consumers idempotent.

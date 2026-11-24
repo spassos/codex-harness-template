@@ -1,13 +1,18 @@
-"""Render the template for representative answer sets and run the generated project's gates.
+"""Check the rendered layout, a live default API, and the generated projects' gates."""
 
-Fast checks always run; the full `make check` (Docker for testcontainers) runs with --full.
-"""
-
+import json
 import os
+import re
 import shutil
+import signal
 import subprocess
+import sys
+import time
 import tomllib
+from contextlib import suppress
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 import pytest
 from copier import run_copy
@@ -35,14 +40,18 @@ def render(destination: Path, answers: dict[str, object]) -> Path:
     return destination
 
 
+def project_env() -> dict[str, str]:
+    return {key: value for key, value in os.environ.items() if key != "VIRTUAL_ENV"}
+
+
 def sh(cwd: Path, *command: str) -> None:
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-    subprocess.run(command, cwd=cwd, check=True, env=env)
+    subprocess.run(command, cwd=cwd, check=True, env=project_env())
 
 
 @pytest.fixture(params=sorted(SCENARIOS))
 def project(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
-    return render(tmp_path / request.param, SCENARIOS[request.param])
+    answers = {} if request.param == "minimal" else SCENARIOS[request.param]
+    return render(tmp_path / request.param, answers)
 
 
 def test_renders_expected_layout(project: Path) -> None:
@@ -65,8 +74,86 @@ def test_renders_expected_layout(project: Path) -> None:
 
 @pytest.mark.slow
 def test_generated_project_passes_its_own_gates(project: Path) -> None:
-    if shutil.which("docker") is None:
+    if project.name != "minimal" and shutil.which("docker") is None:
         pytest.skip("Docker is required for integration tests")
-    sh(project, "git", "init", "-q", "-b", "main")
-    sh(project, "uv", "sync", "--all-groups", "-q")
+    sh(project, "make", "bootstrap")
     sh(project, "make", "check")
+
+
+def request_json(url: str, payload: dict[str, str] | None = None) -> tuple[int, dict[str, object]]:
+    request = Request(
+        url,
+        data=json.dumps(payload).encode() if payload is not None else None,
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=2) as response:
+        return response.status, json.load(response)
+
+
+def wait_for_api(server: subprocess.Popen[bytes], log: Path) -> str:
+    deadline = time.monotonic() + 30
+    while server.poll() is None and time.monotonic() < deadline:
+        address = re.search(r"Uvicorn running on (http://127\.0\.0\.1:\d+)", log.read_text())
+        if address:
+            url = address[1]
+            try:
+                status, ready = request_json(f"{url}/health/ready")
+            except (URLError, TimeoutError):
+                pass
+            else:
+                if status == 200 and ready["status"] == "ok":
+                    return url
+        time.sleep(0.1)
+    pytest.fail(f"The generated API did not become ready:\n{log.read_text()}")
+
+
+@pytest.mark.smoke
+def test_default_scaffold_runs_without_docker(tmp_path: Path) -> None:
+    project = tmp_path / "acme-orders"
+    project.mkdir()
+    sh(
+        ROOT,
+        sys.executable,
+        "-m",
+        "copier",
+        "copy",
+        "--defaults",
+        "--vcs-ref=HEAD",
+        "-d",
+        "project_name=Acme Orders",
+        ".",
+        str(project),
+    )
+    sh(project, "make", "bootstrap")
+    assert (project / ".git").is_dir()
+    assert (project / "uv.lock").is_file()
+
+    env = {key: value for key, value in project_env().items() if not key.startswith("APP_")}
+    env.update(UVICORN_HOST="127.0.0.1", UVICORN_PORT="0")
+    log = tmp_path / "api.log"
+    with log.open("w") as output:
+        server = subprocess.Popen(
+            ["make", "run"],
+            cwd=project,
+            env=env,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        try:
+            url = wait_for_api(server, log)
+            created_status, item = request_json(f"{url}/items", {"name": "book"})
+            assert created_status == 201
+            assert item["name"] == "book"
+            assert request_json(f"{url}/items/{item['id']}") == (200, item)
+        except Exception:
+            print(log.read_text())
+            raise
+        finally:
+            with suppress(ProcessLookupError):
+                os.killpg(server.pid, signal.SIGTERM)
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(server.pid, signal.SIGKILL)
+                server.wait()

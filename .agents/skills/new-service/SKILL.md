@@ -1,25 +1,25 @@
 ---
 name: new-service
-description: Scaffold a new Python service repository from this Copier template — interview for name and integrations (PostgreSQL, Redis, Kafka/RabbitMQ), render it, verify it passes `make check`, and start discovery. Use for "novo serviço", "novo repositório", "scaffold", "criar projeto", "bootstrap".
+description: Scaffold and verify a new Python service repository from this Copier template. The default is an in-memory FastAPI API, with optional PostgreSQL, Redis and Kafka or RabbitMQ. Use for "novo serviço", "novo repositório", "scaffold", "criar projeto", "bootstrap".
 ---
 
-# New service (scaffolding agent)
+# New service
 
-1. Ask (one round, offer defaults): product/service name, one-sentence description, owning team,
-   Python version (3.12/3.13/3.14, default 3.13), PostgreSQL? Redis? event broker
-   (none/kafka/rabbit), target directory (default `../<slug>`). Infer integrations from the
-   description when obvious and confirm.
-2. Render without prompts:
+1. Use the inputs already provided. Ask for the project name if missing. Default to Python 3.13,
+   `../<slug>` as the destination, and the in-memory profile. Enable integrations requested for
+   the service. Use Copier's defaults for the description and owning team unless provided.
+2. Render from the template checkout using its locked Copier CLI:
    ```bash
-   uvx copier copy --defaults --vcs-ref=HEAD \
-     -d project_name="<name>" -d description="<desc>" -d author_name="<team>" \
-     -d python_version=<ver> -d use_postgres=<true|false> -d use_redis=<true|false> \
-     -d event_broker=<none|kafka|rabbit> \
-     . <target-dir>
+   uv run --locked copier copy --defaults --vcs-ref=HEAD -d project_name="<name>" . "<target-dir>"
    ```
-   (From outside this repo use `gh:spassos/codex-harness-template` as source.)
-3. Verify in `<target-dir>`: `make setup` then `make check` (Docker must be running for the
-   integration tests). Any failure is a template bug — report it, do not patch the output by hand.
-4. Initial commit: `git add -A && git commit -m "chore: scaffold from codex-harness-template"`.
-5. Hand over: summarize what was generated (integrations, commands, CI/CD setup steps from
-   `docs/ways-of-working.md#entrega-cicd`) and suggest starting `$discovery` inside the new repo.
+   Pass any provided `description`, `author_name` or `python_version` with `-d`. Add
+   `-d use_postgres=true`, `-d use_redis=true` or `-d event_broker=kafka` /
+   `-d event_broker=rabbit` only as selected. Outside this checkout, use `uvx copier copy`
+   with `gh:spassos/codex-harness-template` as the source.
+3. In the generated repository, run `make bootstrap` and `make check`. Integration profiles
+   require a running Docker daemon for their tests. If a step fails, investigate the environment
+   and dependencies before attributing the failure to the template.
+4. Once validation passes, create the initial local commit:
+   `git add -A && git commit -m "chore: scaffold from codex-harness-template"`.
+5. Report the generated profile, the checks run, and how to start the app. The in-memory profile
+   starts with `make run`. For infrastructure profiles, follow the generated README.

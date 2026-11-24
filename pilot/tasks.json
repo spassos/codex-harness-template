@@ -1,0 +1,4 @@
+{
+  "warning": "Fix observability for POST /items. When the domain rejects a whitespace-only name, emit one structured warning named invalid_item without including request data. Preserve the existing 422 status and response. Add a regression test and verify the change.",
+  "note": "Extend the in-memory items API with an optional string field named note. POST and repeated GETs must return the exact note supplied, including an empty string. Omitted and null notes must work for existing clients. Keep the event contract unchanged. The product owner has approved these acceptance criteria and the plan to carry the value through the HTTP schema, domain, service, storage and cache, with compatibility tests. Implement and verify the change."
+}

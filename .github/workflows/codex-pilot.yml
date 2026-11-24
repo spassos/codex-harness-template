@@ -1,0 +1,187 @@
+name: Codex scaffolding pilot
+
+on: workflow_dispatch
+
+permissions: {}
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.inputs.outputs.matrix }}
+    steps:
+      - name: Verify pilot credentials
+        env:
+          CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
+        run: |
+          if [[ "$CONFIGURED" != true ]]; then
+            echo 'Configure the OPENAI_API_KEY Actions secret to run the pilot.'
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: 0.13.9
+          enable-cache: false
+      - id: inputs
+        run: |
+          uv run --locked python pilot/prepare.py "$RUNNER_TEMP/pilot"
+          cd "$RUNNER_TEMP/pilot"
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: guided
+          path: ${{ runner.temp }}/pilot/guided.tar
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: baseline
+          path: ${{ runner.temp }}/pilot/baseline.tar
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: assignment
+          path: |
+            ${{ runner.temp }}/pilot/matrix.json
+            ${{ runner.temp }}/pilot/revision.txt
+
+  run:
+    name: Candidate ${{ matrix.id }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: ${{ matrix.arm }}
+          path: ${{ runner.temp }}/input
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: 0.13.9
+          enable-cache: false
+      - name: Bootstrap candidate and warm audit cache
+        id: bootstrap
+        env:
+          TASK: ${{ matrix.task }}
+        run: |
+          tar -xf "$RUNNER_TEMP"/input/*.tar
+          jq -er --arg task "$TASK" '.[$task]' tasks.json > "$RUNNER_TEMP/request.txt"
+          cd project
+          git init -q -b main
+          git add -A
+          git -c user.name=Pilot -c user.email=pilot@example.invalid commit -qm baseline
+          git rev-parse HEAD > "$RUNNER_TEMP/base"
+          uv sync --locked --all-groups
+          make audit
+          mkdir "$RUNNER_TEMP/review"
+          date +%s > "$RUNNER_TEMP/start"
+      - name: Apply the requested change
+        id: agent
+        timeout-minutes: 15
+        uses: openai/codex-action@10cb888d2ed3b99867f7e7ccff174a861a75aeb6
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          codex-version: 0.172.0-alpha.2
+          model: gpt-5.4
+          effort: medium
+          sandbox: workspace-write
+          codex-args: '["--trust", "-c", "sandbox_workspace_write.network_access=false"]'
+          working-directory: ${{ github.workspace }}/project
+          codex-home: ${{ runner.temp }}/pilot-session
+          prompt-file: ${{ runner.temp }}/request.txt
+          output-file: ${{ runner.temp }}/review/response.txt
+      - name: Collect anonymized changes and measurements
+        if: ${{ !cancelled() }}
+        env:
+          BOOTSTRAP: ${{ steps.bootstrap.outcome }}
+          OUTCOME: ${{ steps.agent.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/review"
+          elapsed=null
+          if [[ -f "$RUNNER_TEMP/start" ]]; then
+            elapsed=$(( $(date +%s) - $(cat "$RUNNER_TEMP/start") ))
+          fi
+          jq -n --arg bootstrap "$BOOTSTRAP" --arg outcome "$OUTCOME" --argjson seconds "$elapsed" \
+            '{bootstrap: $bootstrap, agent: $outcome, seconds: $seconds, interventions_given: 0}' > "$RUNNER_TEMP/review/metrics.json"
+          if [[ "$BOOTSTRAP" == success ]]; then
+            python usage.py "$RUNNER_TEMP/pilot-session/sessions" > "$RUNNER_TEMP/review/usage.json"
+            cd project
+            git add --intent-to-add .
+            git diff --binary "$(cat "$RUNNER_TEMP/base")" > "$RUNNER_TEMP/review/change.patch"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ !cancelled() }}
+        with:
+          name: review-${{ matrix.id }}
+          path: ${{ runner.temp }}/review/
+          if-no-files-found: error
+
+  grade:
+    name: Grade ${{ matrix.id }}
+    needs: [prepare, run]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: ${{ matrix.arm }}
+          path: ${{ runner.temp }}/input
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: review-${{ matrix.id }}
+          path: ${{ runner.temp }}/review
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: 0.13.9
+          enable-cache: false
+      - name: Reconstruct candidate in a fresh runner
+        run: |
+          cd "$RUNNER_TEMP"
+          jq -e '.bootstrap == "success" and .agent == "success"' review/metrics.json > /dev/null
+          tar -xf input/*.tar
+          cd project
+          git init -q
+          if [[ -s ../review/change.patch ]]; then
+            git apply ../review/change.patch
+          fi
+          uv sync --locked --all-groups
+      - name: Reserved acceptance checks
+        id: acceptance
+        env:
+          TASK: ${{ matrix.task }}
+        run: |
+          cd "$RUNNER_TEMP/project"
+          uv run --frozen pytest -q "$GITHUB_WORKSPACE/pilot/acceptance.py::test_$TASK"
+      - name: Full generated checks
+        id: checks
+        if: ${{ !cancelled() && steps.acceptance.outcome != 'skipped' }}
+        run: cd "$RUNNER_TEMP/project" && make check
+      - name: Record results
+        if: ${{ !cancelled() }}
+        env:
+          ACCEPTANCE: ${{ steps.acceptance.outcome }}
+          CHECKS: ${{ steps.checks.outcome }}
+        run: |
+          jq -n --arg acceptance "$ACCEPTANCE" --arg checks "$CHECKS" \
+            '{acceptance: $acceptance, make_check: $checks}' > "$RUNNER_TEMP/score.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ !cancelled() }}
+        with:
+          name: score-${{ matrix.id }}
+          path: ${{ runner.temp }}/score.json

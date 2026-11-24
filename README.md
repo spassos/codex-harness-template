@@ -349,6 +349,9 @@ codex-harness-template/
 `{% if use_postgres %}postgres.py{% endif %}.jinja`, so the file disappears when the option is
 off.
 
+The [Codex scaffolding pilot](pilot/README.md) compares generated projects with and without local
+agent guidance on two development tasks. It runs on demand. See the [pilot status](pilot/resultados.md).
+
 ## Developing the template
 
 ```bash

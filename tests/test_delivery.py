@@ -53,7 +53,7 @@ def test_deploy_requires_destination_before_rollout() -> None:
     steps = job["steps"]
     validate = next(step for step in steps if step.get("name") == "Check deployment settings")
     assert steps.index(validate) < next(i for i, step in enumerate(steps) if step.get("id") == "rollout")
-    result = subprocess.run(["bash", "-eu", "-c", validate["run"]], env={}, capture_output=True)
+    result = subprocess.run(["bash", "-eu", "-c", validate["run"]], check=False, env={}, capture_output=True)
     assert result.returncode != 0 and b"APP_URL" in result.stderr
     assert (
         steps[-1]["if"]

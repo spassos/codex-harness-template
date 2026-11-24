@@ -47,7 +47,7 @@ O fluxo completo está em [`docs/ways-of-working.md`](docs/ways-of-working.md).
 | Plano/ADR | `$plan` | `plan.md`, `docs/adr/` |
 | Implementação | `$implement`, `$integrate` | código + testes |
 | Revisão | `$review` | PR |
-| Entrega | `$ship` | CI/CD → produção verificada |
+| Entrega | `$ship` | Merge com CI verde; produção verificada quando o CD está ativo |
 
 Regras para agentes e pessoas: [`AGENTS.md`](AGENTS.md) · Convenções: [`docs/conventions.md`](docs/conventions.md).
 
@@ -69,6 +69,6 @@ docs/{product,specs,adr}
 
 ## Entrega
 
-`main` é sempre implantável: cada merge gera imagem em `ghcr.io`, faz deploy em staging e
-produção e **verifica** que a versão (SHA) está no ar e saudável — senão faz rollback. Configuração
+Cada merge roda o CI. Configure as variáveis do repositório `ENABLE_CD=true` para publicar a
+imagem e implantar em staging e produção, e `ENABLE_RELEASES=true` para releases automáticas. Detalhes
 em [`docs/ways-of-working.md#entrega-cicd`](docs/ways-of-working.md#entrega-cicd).

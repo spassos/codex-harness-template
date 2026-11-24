@@ -13,7 +13,7 @@ flowchart LR
   S -->|ACs aprovados| P[3. Plan<br/>$plan + architect<br/>plan.md / ADR]
   P -->|plano aprovado| I[4. Implement<br/>$implement + test_engineer<br/>TDD]
   I -->|make check verde| R[5. Review<br/>$review + reviewer + security_auditor]
-  R -->|sem bloqueios| SH[6. Ship<br/>$ship<br/>PR → CI → CD]
+  R -->|sem bloqueios| SH[6. Ship<br/>$ship<br/>PR → CI → merge · CD opcional]
   SH -->|smoke em produção| M[Medir métricas do PRD]
   M -.aprendizado.-> D
 ```
@@ -25,7 +25,7 @@ flowchart LR
 | Plan | Tech Lead + `architect` (`$plan`) | `plan.md`, `docs/adr/*` | Plano e ADRs aprovados |
 | Implement | Dev + Codex (`$implement`, `$integrate`) | código + testes | `make check` verde, cada AC com teste |
 | Review | `reviewer` + `security_auditor` + humano (`$review`) | comentários no PR | Nenhum achado bloqueante |
-| Ship | CI/CD (`$ship`) | release em produção | Smoke test valida versão + readiness em produção |
+| Ship | CI/CD (`$ship`) | merge ou implantação | CI verde e, com CD ativo, versão e readiness verificadas |
 
 ## Como usar com o Codex
 
@@ -61,15 +61,27 @@ Os subagents (`.codex/agents/`) são acionados pelas skills ou explicitamente:
 ## Entrega (CI/CD)
 
 1. **PR** → `ci.yml`: qualidade, testes, segurança, build/scan da imagem, título Conventional Commit.
-2. **Merge em `main`** → `cd.yml`: CI de novo → imagem no GHCR (`:<sha>`) com attestation →
+2. **Merge em `main`** → `cd.yml`: CI de novo. Com a variável de repositório `ENABLE_CD=true`, segue para imagem no GHCR (`:<sha>`) com attestation →
    `deploy.yml` em **staging** → `scripts/smoke.py` confirma que `/health/live` responde a versão
    (SHA) recém-publicada e `/health/ready` está 200 → **production** (aprovação no GitHub
    Environment) → mesma verificação → rollback automático se falhar.
-3. `release.yml` (release-please) mantém o PR de release com CHANGELOG e versionamento semântico.
+3. Com a variável de repositório `ENABLE_RELEASES=true`, `release.yml` (release-please) mantém o PR de release com CHANGELOG e versionamento semântico.
 
-Configuração única no GitHub:
+As duas variáveis são independentes. Para projetos existentes que adotarem esta versão com
+`copier update`, defina as opções desejadas antes do próximo merge. A falta de configuração
+do destino com CD ativo falha antes do rollout.
+
+Configuração no GitHub:
 - Environments `staging` e `production` (production com *required reviewers*), cada um com a
   variável `APP_URL` e o segredo `KUBECONFIG_DATA` (base64) — ou adapte `scripts/deploy.sh` à sua
   plataforma mantendo o contrato `deploy|rollback`.
 - Branch protection em `main`: PR obrigatório, checks do CI obrigatórios, squash merge.
 - Opcional: segredo `OPENAI_API_KEY` + variável `CODEX_REVIEW=true` para review automático.
+
+## Configuração do Codex pelo time
+
+Configure aprovações, sandbox, destinos de rede permitidos e esforço de raciocínio nas políticas
+do ambiente ou na configuração pessoal do Codex. Para instalar e auditar dependências, habilite
+acesso aos índices aprovados pelo time. MCP é opcional. Ao integrar uma ferramenta, documente
+seu propósito, os escopos mínimos, o proprietário e como provisionar credenciais nas configurações
+do ambiente. Mantenha valores secretos fora do repositório.

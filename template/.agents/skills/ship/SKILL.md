@@ -1,9 +1,9 @@
 ---
 name: ship
-description: Deliver a reviewed change to production — branch, Conventional Commit PR, CI gates, merge, release-please, CD to staging and production with post-deploy verification and rollback. Use for "ship", "deploy", "release", "abrir PR", "subir para produção", "entregar".
+description: Deliver a reviewed change through the repository's enabled workflows — branch, Conventional Commit PR, CI gates, merge, release-please, CD to staging and production with post-deploy verification and rollback. Use for "ship", "deploy", "release", "abrir PR", "subir para produção", "entregar".
 ---
 
-# Ship → production verified
+# Ship a reviewed change
 
 1. Use `fix/<slug>` for a local fix or `feat/NNN-<slug>` for a planned feature. Run `make check` locally.
 2. Open a PR with `.github/pull_request_template.md` filled in; title in Conventional Commits
@@ -12,12 +12,9 @@ description: Deliver a reviewed change to production — branch, Conventional Co
    gitleaks, zizmor), image build + Trivy, PR title. Optional Codex review comment
    (`codex-review.yml`). Address findings; never re-run hoping for a different result.
 4. Human approval → squash merge to `main`.
-5. CD (`cd.yml`) runs automatically: CI again → image pushed to GHCR with provenance attestation →
-   **staging** deploy → `scripts/smoke.py` proves `/health/live` reports the commit SHA and
-   `/health/ready` is 200 → **production** (GitHub Environment approval) → same verification →
-   automatic `scripts/deploy.sh rollback` if verification fails.
-6. Watch the run (`gh run watch` or the Actions tab). Done = production smoke test green.
-   Check the product metrics if defined for the change. Update the spec status to `Shipped` for planned work.
-7. release-please keeps a release PR with the CHANGELOG; merging it tags a semantic version.
-
-Incident? Roll back first (`scripts/deploy.sh rollback` or revert commit → CD), investigate after.
+5. Watch the main CI run. With CD disabled, a merged change with green CI completes delivery.
+6. When the repository variable `ENABLE_CD` is `true`, follow the image publication, staging and
+   production jobs. Check each deployment's smoke test for the expected commit and readiness
+   before reporting it live. Report any skipped, pending or failed deployment accurately.
+7. When `ENABLE_RELEASES` is `true`, release-please maintains the release PR and changelog.
+   Check product metrics when defined and record the actual delivery status for planned work.

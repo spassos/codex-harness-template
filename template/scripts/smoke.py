@@ -31,12 +31,17 @@ def verify(base_url: str, version: str, attempts: int, delay: float) -> bool:
     base_url = base_url.rstrip("/")
     for attempt in range(1, attempts + 1):
         try:
-            _, live = fetch(f"{base_url}/health/live")
+            live_status, live = fetch(f"{base_url}/health/live")
             ready_status, ready = fetch(f"{base_url}/health/ready")
         except (OSError, ValueError) as error:
             sys.stderr.write(f"[{attempt}/{attempts}] unreachable: {error}\n")
         else:
-            if live.get("version") == version and ready_status == HTTP_OK:
+            if (
+                live_status == HTTP_OK
+                and live.get("version") == version
+                and ready_status == HTTP_OK
+                and ready.get("status") == "ok"
+            ):
                 sys.stdout.write(f"OK: version {version} is live and ready\n")
                 return True
             sys.stderr.write(

@@ -37,7 +37,7 @@ Always use `uv` (`uv add <pkg>`, `uv add --dev <pkg>`); never `pip install`. Nev
 | 3. Plan | `$plan` | `docs/specs/NNN-<slug>/plan.md` (+ ADR if needed) | Human approves plan |
 | 4. Implement | `$implement` (`$integrate` for new I/O) | Code + tests, one task at a time | `make check` green |
 | 5. Review | `$review` | Review report, fixes | No blocking findings |
-| 6. Ship | `$ship` | PR → CI → CD → production verified | Smoke test passes in production |
+| 6. Ship | `$ship` | Merge with green CI; follow enabled delivery jobs | With CD enabled, verify the deployed version and readiness |
 
 Subagents in `.codex/agents/` include `architect` for design, `test_engineer` for tests,
 `reviewer` for correctness, and `security_auditor` for security. Use them when the task benefits

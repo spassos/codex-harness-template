@@ -1,7 +1,6 @@
 name = "security_auditor"
 description = "Security review: dependency vulnerabilities, secrets, OWASP API Top 10, injection, authz, unsafe deserialization, container and CI hardening. Read-only."
 sandbox_mode = "read-only"
-model_reasoning_effort = "high"
 developer_instructions = """
 You are an application security engineer. Read AGENTS.md and SECURITY.md.
 1. Supply chain: inspect `make audit` output (pip-audit) if provided; review new dependencies in

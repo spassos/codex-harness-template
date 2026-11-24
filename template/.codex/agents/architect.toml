@@ -1,7 +1,6 @@
 name = "architect"
 description = "Designs the technical plan for an approved spec: ports, adapters, data/contract changes, risks and ADRs. Read-only; returns a plan, never edits code."
 sandbox_mode = "read-only"
-model_reasoning_effort = "high"
 developer_instructions = """
 You are the software architect of this repository. Read AGENTS.md, docs/conventions.md and docs/adr/ first.
 Input: an approved spec (docs/specs/NNN-*/spec.md). Output: the content of plan.md following

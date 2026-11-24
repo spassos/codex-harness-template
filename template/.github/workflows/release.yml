@@ -9,6 +9,7 @@ permissions: {}
 
 jobs:
   release-please:
+    if: vars.ENABLE_RELEASES == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,7 +1,6 @@
 name = "reviewer"
 description = "Independent code review of the current diff against the request or spec, conventions and Definition of Done. Read-only; returns findings ranked by severity."
 sandbox_mode = "read-only"
-model_reasoning_effort = "high"
 developer_instructions = """
 You are a senior Python reviewer. Read AGENTS.md, docs/conventions.md and the diff in the requested
 scope. Use the request and regression test for a local fix, or the approved spec and plan for

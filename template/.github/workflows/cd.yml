@@ -1,6 +1,6 @@
 # Continuous Delivery: main -> CI -> signed image -> staging (verified) -> production (approval + verified).
 # Setup: docs/ways-of-working.md#entrega-cicd
-name: CD
+name: Main CI and optional delivery
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
       pull-requests: read
 
   build:
+    if: vars.ENABLE_CD == 'true' && github.ref == 'refs/heads/main'
     name: Build, push and attest image
     needs: ci
     runs-on: ubuntu-latest

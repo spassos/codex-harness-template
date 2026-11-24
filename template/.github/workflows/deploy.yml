@@ -20,8 +20,6 @@ permissions: {}
 jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
-    # Skipped until the GitHub Environment defines the APP_URL variable.
-    if: vars.APP_URL != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,12 +37,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check deployment settings
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          : "${APP_URL:?Set APP_URL in the target GitHub Environment}"
       - name: Roll out
+        id: rollout
         run: scripts/deploy.sh deploy
       - name: Verify the release is live and ready
+        id: verify
         env:
           APP_URL: ${{ vars.APP_URL }}
         run: python3 scripts/smoke.py --url "$APP_URL" --version "$GITHUB_SHA"
       - name: Roll back
-        if: failure()
+        if: failure() && (steps.rollout.outcome == 'failure' || steps.verify.outcome == 'failure')
         run: scripts/deploy.sh rollback

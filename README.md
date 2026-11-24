@@ -38,8 +38,7 @@ This project defines **how** humans and agents work together, and ships it ready
   (database, cache, events, APIs) and tests at every level.
 - **Automated guardrails**: lint, types, architecture, dependency audit, secrets and image
   scanning, enforced locally, in pre-commit and in CI.
-- **Continuous delivery**: every merge reaches production, and a smoke test proves the right
-  version is live.
+- **Continuous delivery**: teams can enable staging and production deployment with smoke checks for version and readiness.
 
 Core principle: **don't reinvent the wheel**. Everything is built on established tools from the
 ecosystem (uv, Ruff, mypy, pytest, FastAPI, SQLAlchemy, FastStream, Copier, GitHub Actions); the
@@ -139,7 +138,7 @@ flowchart LR
 | **3. Plan** | Tech Lead + `architect` | `plan.md` (design per layer, failure modes, AC → test mapping, small tasks) + ADRs | Plan approved |
 | **4. Implement** | Developer + Codex | Code + tests, one task at a time, TDD | `make check` green, every AC has a test |
 | **5. Review** | `reviewer` + `security_auditor` + human | Ranked findings | No blocking findings |
-| **6. Ship** | CI/CD | PR → CI → staging → production | Smoke test confirms the version in production |
+| **6. Ship** | CI/CD | Merge with green CI, optional CD | Confirm the version in production when CD runs |
 
 A clearly scoped local fix starts at `$implement`, with a regression test and `make check`.
 Changes to public contracts, migrations and architectural decisions require an approved spec and
@@ -166,7 +165,7 @@ configuration in `.codex/config.toml` and subagents in `.codex/agents/*.toml`.
 | File | Purpose |
 |---|---|
 | `AGENTS.md` | Commands, SDLC phases, architecture rules, conventions and guardrails, read by the agent on every task |
-| `.codex/config.toml` | `approval_policy = on-request`, `workspace-write` sandbox, network enabled for uv, subagent limits |
+| `.codex/config.toml` | project subagent limits; runtime permissions and reasoning effort are configured by the team |
 | `.agents/skills/discovery` | Interviews and writes the PRD (template in `assets/`) |
 | `.agents/skills/specify` | Spec with acceptance criteria and contracts |
 | `.agents/skills/plan` | Technical plan, tasks and ADRs |
@@ -301,7 +300,7 @@ flowchart LR
   CI -->|squash merge| M[main]
   M --> CD[cd.yml]
   CD --> CI2[CI again]
-  CI2 --> B[Build + push GHCR<br/>:sha + attestation]
+  CI2 -->|ENABLE_CD| B[Build + push GHCR<br/>:sha + attestation]
   B --> ST[Deploy staging]
   ST --> V1{smoke.py<br/>version = SHA?<br/>ready = 200?}
   V1 -->|yes| PA[Approval<br/>production]
@@ -314,10 +313,10 @@ flowchart LR
 
 - **`ci.yml`**: runs on every PR and is reused by CD, so nothing reaches production without
   passing the same gates.
-- **`cd.yml` + `deploy.yml`**: the image carries its version (`APP_VERSION = commit SHA`). After
+- **`cd.yml` + `deploy.yml`**: main CI always runs. With the repository variable `ENABLE_CD=true`, the image carries its version (`APP_VERSION = commit SHA`). After
   each deploy, `scripts/smoke.py` polls `/health/live` until it reports exactly that SHA and
   requires `/health/ready = 200`. If it fails, it runs `scripts/deploy.sh rollback`.
-- **`release.yml`**: release-please produces semantic versions and a CHANGELOG from
+- **`release.yml`**: with `ENABLE_RELEASES=true`, release-please produces semantic versions and a CHANGELOG from
   Conventional Commits.
 - **`codex-review.yml`**: Codex review posted as a PR comment (opt-in).
 
@@ -327,7 +326,7 @@ flowchart LR
 2. Protect `main`: required PRs, required CI checks, squash merge.
 3. Create the **Environments** `staging` and `production` (production with *required
    reviewers*). In each one, set the `APP_URL` variable and the `KUBECONFIG_DATA` secret
-   (base64 kubeconfig). Deploy jobs stay disabled until `APP_URL` exists.
+   (base64 kubeconfig). Missing destination settings fail the deployment before rollout. Enable `ENABLE_CD=true` once configured. Set `ENABLE_RELEASES=true` independently for automated versioning. Existing projects adopting these workflows should select their desired settings before their next merge.
 4. Not on Kubernetes? Adapt the `deploy` and `rollback` functions in `scripts/deploy.sh` (ECS,
    Cloud Run, Fly.io...) while keeping the contract.
 5. Optional: `OPENAI_API_KEY` secret and `CODEX_REVIEW=true` variable for the automated review.

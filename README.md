@@ -1,16 +1,20 @@
-# codex-harness-template
+# codex-scaffold
 
 Generate a Python service repository with the **`codex-scaffold` CLI**, then open it in Codex.
 The generated repository includes a working FastAPI app, tests, project skills, specialized
 agents, conventions and example specs. Add team MCP endpoints when the project needs them.
 
-Install [uv](https://docs.astral.sh/uv/) and Git. From the directory that should contain your new repository, run:
+With [uv](https://docs.astral.sh/uv/) and Git installed, clone this repository using GitHub's
+**Code** button. From the root of your clone, generate your first service:
 
 ```bash
-uvx --from 'git+https://github.com/spassos/codex-harness-template.git@main' codex-scaffold orders-api
-cd orders-api
+uv run codex-scaffold ../orders-api
+cd ../orders-api
 codex
 ```
+
+To install the CLI for repeated use, run `uv tool install .` in the clone. Then run
+`codex-scaffold orders-api` from the directory where you keep your projects.
 
 ---
 
@@ -79,12 +83,25 @@ terminal in the generated directory, use `make run` to start the default API and
 to run its unit and API tests. Developing the service requires make. Docker is needed for external
 integration profiles.
 
-For repeated use, install the command once:
+If you use the GitHub CLI, you can clone and install from your terminal:
 
 ```bash
-uv tool install 'git+https://github.com/spassos/codex-harness-template.git@main'
-codex-scaffold --help
+gh repo clone spassos/codex-harness-template
+cd codex-harness-template
+uv tool install .
+cd ..
 codex-scaffold inventory --name "Inventory Service" --postgres --redis --broker rabbit
+```
+
+If your shell cannot find `codex-scaffold` after installation, run `uv tool update-shell`
+and open a new terminal. If you previously installed the distribution named
+`codex-harness-template` with `uv tool install`, remove that installation with
+`uv tool uninstall codex-harness-template` before installing under the new name.
+
+You can also run the CLI directly from GitHub:
+
+```bash
+uvx --from 'git+https://github.com/spassos/codex-harness-template.git@main' codex-scaffold orders-api
 ```
 
 The CLI initializes Git and locks the generated dependencies with uv. By default it fetches the
@@ -388,3 +405,5 @@ requires a new scenario. Read [`AGENTS.md`](AGENTS.md) before changing the templ
 
 Technical decisions for the generated service live in `template/docs/adr/`, and the full process
 in [`template/docs/ways-of-working.md`](template/docs/ways-of-working.md) (Portuguese).
+
+Maintainers can publish the CLI using the [PyPI release instructions](docs/pypi.md).

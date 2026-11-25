@@ -65,3 +65,9 @@ coverage_threshold:
   type: int
   help: 'Cobertura mínima de testes (%)'
   default: 90
+
+mcp_servers:
+  type: json
+  default: {}
+  help: 'Servidores MCP do projeto (objeto JSON mapeando nome para URL HTTPS, sem credenciais)'
+  validator: "{% if mcp_servers is not mapping %}Use um objeto JSON{% endif %}"

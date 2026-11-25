@@ -31,7 +31,7 @@ def create_app(
             app.state.container = container
             yield
 
-    app = FastAPI(title="{{ project_name }}", version=settings.version, lifespan=lifespan)
+    app = FastAPI(title={{ project_name | to_json(ensure_ascii=False) }}, version=settings.version, lifespan=lifespan)
     app.add_middleware(CorrelationIdMiddleware)
     app.include_router(health.router)
     app.include_router(items.router)

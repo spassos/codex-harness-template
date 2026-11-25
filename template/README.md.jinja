@@ -34,6 +34,17 @@ Abra a documentação em http://localhost:8000/docs. Use `make test-unit` para f
 `make check` para lint, tipos, arquitetura, auditoria, testes e cobertura. Para instalar os hooks
 locais, use `make setup`. `make help` lista todos os comandos.
 
+## Abrir no Codex
+
+Abra a raiz deste repositório no Codex e confirme a confiança no projeto para carregar sua
+configuração local. No terminal, execute `codex` nesta pasta. O `AGENTS.md` orienta a escolha
+da skill. Use `$discovery` para explorar uma ideia de produto e `$implement` para uma correção
+local bem definida. A spec de referência e seu plano ficam em `docs/specs/001-items/`.
+{% if mcp_servers %}
+Servidores MCP configurados neste projeto: {% for name in mcp_servers %}`{{ name }}`{% if not loop.last %}, {% endif %}{% endfor %}.
+Confira-os com `codex mcp list` na raiz do projeto confiável. Para servidores com OAuth, use
+`codex mcp login NOME`. Guarde credenciais na configuração do ambiente.
+{% endif %}
 ## Como trabalhamos
 
 Para uma correção local bem definida, comece em `$implement` com um teste de regressão. Mudanças

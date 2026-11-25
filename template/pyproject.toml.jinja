@@ -1,10 +1,10 @@
 [project]
 name = "{{ project_slug }}"
 version = "0.1.0"
-description = "{{ description }}"
+description = {{ description | to_json(ensure_ascii=False) }}
 readme = "README.md"
 requires-python = ">={{ python_version }}"
-authors = [{ name = "{{ author_name }}" }]
+authors = [{ name = {{ author_name | to_json(ensure_ascii=False) }} }]
 dependencies = [
     "asgi-correlation-id>=4.3",
     "fastapi>=0.115",

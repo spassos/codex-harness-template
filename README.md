@@ -1,8 +1,16 @@
 # codex-harness-template
 
-> A software engineering way of working for **Python** with **OpenAI Codex**: a template that
-> generates repositories ready to build robust services, from product *discovery* to code
-> verified in production.
+Generate a Python service repository with the **`codex-scaffold` CLI**, then open it in Codex.
+The generated repository includes a working FastAPI app, tests, project skills, specialized
+agents, conventions and example specs. Add team MCP endpoints when the project needs them.
+
+Install [uv](https://docs.astral.sh/uv/) and Git. From the directory that should contain your new repository, run:
+
+```bash
+uvx --from 'git+https://github.com/spassos/codex-harness-template.git@main' codex-scaffold orders-api
+cd orders-api
+codex
+```
 
 ---
 
@@ -48,7 +56,7 @@ template only wires them together, leanly.
 
 ```mermaid
 flowchart LR
-  T[codex-harness-template<br/>Copier] -->|copier copy<br/>or $new-service| R[New repository]
+  T[codex-harness-template<br/>CLI] -->|codex-scaffold| R[New repository]
   R --> C[Codex layer<br/>AGENTS.md · skills · subagents]
   R --> S[Python service<br/>hexagonal + integrations]
   R --> G[Gates<br/>make check · pre-commit]
@@ -56,7 +64,7 @@ flowchart LR
   T -.copier update.-> R
 ```
 
-1. You answer a few questions: name, Python version, Postgres?, Redis?, Kafka/RabbitMQ?
+1. Give the CLI a destination and select the integrations your service needs.
 2. [Copier](https://copier.readthedocs.io) renders a repository with **only** what you chose
    (no dead code for integrations you don't use).
 3. The generated project already passes its own gate (`make check`) and is ready for the first
@@ -65,42 +73,36 @@ flowchart LR
 
 ## Quick start
 
-**Prerequisites** are [uv](https://docs.astral.sh/uv/), `make`, Git and optionally the
-[Codex CLI](https://developers.openai.com/codex). The default API uses in-memory storage and runs
-without Docker. Install Docker if you select external integrations or want to run the app in a container.
+Open the generated directory in Codex and trust the project to load its configuration. Start with
+`$discovery` for a new product idea or `$implement` for a well-defined local fix. From another
+terminal in the generated directory, use `make run` to start the default API and `make test-unit`
+to run its unit and API tests. Developing the service requires make. Docker is needed for external
+integration profiles.
 
-### Option 1 — Copier (interactive)
-
-```bash
-uvx copier copy gh:spassos/codex-harness-template my-service
-cd my-service
-make bootstrap   # initialize Git and install dependencies
-make run         # start the API → http://localhost:8000/docs
-```
-
-Run `make test-unit` for fast feedback and `make check` for the full quality gate.
-Use `make setup` to install Git hooks and `make up` to start the app with Docker Compose.
-
-### Option 2 — Copier (non-interactive with optional integrations)
+For repeated use, install the command once:
 
 ```bash
-uvx copier copy --defaults gh:spassos/codex-harness-template my-service \
-  -d project_name="Orders Service" \
-  -d use_postgres=true -d use_redis=true -d event_broker=kafka
+uv tool install 'git+https://github.com/spassos/codex-harness-template.git@main'
+codex-scaffold --help
+codex-scaffold inventory --name "Inventory Service" --postgres --redis --broker rabbit
 ```
 
-### Option 3 — Scaffolding agent in Codex
+The CLI initializes Git and locks the generated dependencies with uv. By default it fetches the
+template from this repository's `main` branch. Use `--ref` to select a revision, or `--template`
+for a local checkout. Choose a new directory. Its name determines the project slug and Python
+package. The generated `.copier-answers.yml` records the template source and revision for updates.
 
-Clone this repository, open `codex` in it and ask:
+For a service that needs an MCP server, pass its HTTPS endpoint. The option is repeatable:
 
-```text
-$new-service create an orders service with Postgres and Kafka
+```bash
+codex-scaffold ai-service --mcp openai-docs=https://developers.openai.com/mcp
 ```
 
-The [`new-service`](.agents/skills/new-service/SKILL.md) skill uses the requested integrations,
-renders the template, runs `make bootstrap` and `make check`, then creates the initial local commit.
+Configure any credentials through Codex for the selected server. The default profile runs with
+in-memory adapters and requires no MCP server. The `$new-service` skill in this checkout can
+also invoke the CLI and verify the new service.
 
-### Template questions
+### Template settings
 
 | Question | Default | Effect |
 |---|---|---|
@@ -113,6 +115,7 @@ renders the template, runs `make bootstrap` and `make check`, then creates the i
 | `use_postgres` | `false` | SQL repository, Alembic, tests against a real Postgres |
 | `use_redis` | `false` | Cache-aside with Redis |
 | `event_broker` | `none` | `kafka`, `rabbit` or `none` (publisher + consumer worker) |
+| `mcp_servers` | `{}` | Project-scoped HTTPS MCP servers selected by the team |
 | `coverage_threshold` | `90` | Minimum coverage required by the gate |
 
 With no integrations selected, the service uses in-memory adapters: the same code runs with no
@@ -339,7 +342,7 @@ codex-harness-template/
 ├── copier.yml                     # template questions
 ├── template/                      # everything rendered into the new project
 ├── .agents/skills/new-service/    # scaffolding agent ($new-service)
-├── tests/test_template.py         # renders 4 scenarios and validates them
+├── tests/test_template.py         # renders 5 scenarios and validates them
 ├── .github/workflows/template-ci.yml
 ├── AGENTS.md                      # rules for whoever (human or agent) maintains the template
 └── pyproject.toml                 # tooling to develop the template
@@ -356,7 +359,7 @@ agent guidance on two development tasks. It runs on demand. See the [pilot statu
 
 ```bash
 uv sync
-uv run pytest            # renders 4 scenarios and validates their layout (seconds)
+uv run pytest            # renders 5 scenarios and validates their layout (seconds)
 uv run pytest -m smoke   # generates and runs the default API, then exercises it over HTTP
 uv run pytest -m slow    # full `make check` for generated projects (Docker for integrations)
 ```
@@ -365,6 +368,7 @@ uv run pytest -m slow    # full `make check` for generated projects (Docker for 
 |---|---|---|---|
 | `full-kafka` | ✅ | ✅ | Kafka |
 | `minimal` | — | — | — |
+| `with-mcp` (project MCP endpoint) | — | — | — |
 | `postgres-rabbit` | ✅ | — | RabbitMQ |
 | `redis-only` | — | ✅ | — |
 

@@ -8,14 +8,13 @@ description: Scaffold and verify a new Python service repository from this Copie
 1. Use the inputs already provided. Ask for the project name if missing. Default to Python 3.13,
    `../<slug>` as the destination, and the in-memory profile. Enable integrations requested for
    the service. Use Copier's defaults for the description and owning team unless provided.
-2. Render from the template checkout using its locked Copier CLI:
+2. Run the project CLI from this checkout:
    ```bash
-   uv run --locked copier copy --defaults --vcs-ref=HEAD -d project_name="<name>" . "<target-dir>"
+   uv run --locked codex-scaffold "<target-dir>" --template . --name "<name>"
    ```
-   Pass any provided `description`, `author_name` or `python_version` with `-d`. Add
-   `-d use_postgres=true`, `-d use_redis=true` or `-d event_broker=kafka` /
-   `-d event_broker=rabbit` only as selected. Outside this checkout, use `uvx copier copy`
-   with `gh:spassos/codex-harness-template` as the source.
+   Pass requested metadata via `--description`, `--author` and `--python`, integrations via
+   `--postgres`, `--redis` and `--broker`, and selected HTTPS endpoints via `--mcp NAME=URL`.
+   The CLI prepares the new Git repository and lockfile. Point it at a new directory.
 3. In the generated repository, run `make bootstrap` and `make check`. Integration profiles
    require a running Docker daemon for their tests. If a step fails, investigate the environment
    and dependencies before attributing the failure to the template.

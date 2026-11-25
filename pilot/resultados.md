@@ -10,6 +10,5 @@ O preflight autenticado do Codex CLI foi bloqueado pelo proxy antes de uma respo
 Há **0 de 12 tentativas concluídas**, sem medições de eficácia, consumo ou tempo para comparar.
 Os controles do avaliador utilizam alterações de referência e estão fora da amostra.
 
-A abertura de issues foi bloqueada pelo acesso à API do GitHub. As duas tarefas estão registradas
-na tabela até a criação das issues. O [roteiro](README.md) descreve a coleta, a revisão cega e
+As tarefas estão registradas no GitHub: [controles de entrega](https://github.com/spassos/codex-harness-template/issues/2) e [piloto do Codex](https://github.com/spassos/codex-harness-template/issues/3). O [roteiro](README.md) descreve a coleta, a revisão cega e
 a exportação dos resultados.

@@ -1,12 +1,12 @@
 # AGENTS.md — codex-harness-template
 
-This repository is a **Copier template** that generates Python service repositories with an
-agentic SDLC for Codex. It is not an application.
+This repository ships the **codex-scaffold CLI**. It uses Copier to generate Python services
+with a project-scoped SDLC for Codex. The CLI entry point lives in `src/codex_scaffold/cli.py`.
 
 - `copier.yml` — questions. `template/` — everything rendered into new projects (`*.jinja` files
   are rendered; conditional files/dirs use `{% if ... %}name{% endif %}`).
 - `.agents/skills/new-service/` — skill that scaffolds a new service (`$new-service`).
-- `tests/test_template.py` — renders four scenarios and checks their layout. Use `-m smoke`
+- `tests/test_template.py` — renders five scenarios and checks their layout. Use `-m smoke`
   for CLI generation and a live HTTP smoke test. Use `-m slow` for `make check` in each
   generated project (Docker for integration scenarios).
 

@@ -6,7 +6,6 @@ import re
 import shutil
 import signal
 import subprocess
-import sys
 import time
 import tomllib
 from contextlib import suppress
@@ -20,6 +19,12 @@ from copier import run_copy
 ROOT = Path(__file__).parents[1]
 
 SCENARIOS = {
+    "with-mcp": {
+        "use_postgres": False,
+        "use_redis": False,
+        "event_broker": "none",
+        "mcp_servers": {"openai-docs": "https://developers.openai.com/mcp"},
+    },
     "full-kafka": {"use_postgres": True, "use_redis": True, "event_broker": "kafka"},
     "minimal": {"use_postgres": False, "use_redis": False, "event_broker": "none"},
     "postgres-rabbit": {"use_postgres": True, "use_redis": False, "event_broker": "rabbit"},
@@ -62,10 +67,22 @@ def test_renders_expected_layout(project: Path) -> None:
     assert (project / "migrations").exists() is answers["use_postgres"]
     assert (package / "adapters" / "redis_cache.py").exists() is answers["use_redis"]
     assert (package / "entrypoints" / "worker.py").exists() is (answers["event_broker"] != "none")
-    for path in ["AGENTS.md", ".codex/config.toml", ".agents/skills/implement/SKILL.md"]:
+    for path in [
+        "AGENTS.md",
+        "docs/conventions.md",
+        "docs/specs/001-items/spec.md",
+        "docs/specs/001-items/plan.md",
+    ]:
         assert (project / path).is_file(), path
     tomllib.loads((project / "pyproject.toml").read_text())
-    tomllib.loads((project / ".codex/config.toml").read_text())
+    skills = {p.parent.name for p in (project / ".agents/skills").glob("*/SKILL.md")}
+    assert {"discovery", "specify", "plan", "implement", "integrate", "review", "ship"} <= skills
+    agents = {p.stem for p in (project / ".codex/agents").glob("*.toml")}
+    assert {"architect", "reviewer", "test_engineer", "security_auditor"} <= agents
+    config = tomllib.loads((project / ".codex/config.toml").read_text())
+    assert config.get("mcp_servers", {}) == {
+        name: {"url": url} for name, url in answers.get("mcp_servers", {}).items()
+    }
     for agent in (project / ".codex/agents").glob("*.toml"):
         assert {"name", "description", "developer_instructions"} <= tomllib.loads(agent.read_text()).keys()
     leftovers = [p for p in project.rglob("*") if "{{" in p.name or p.suffix == ".jinja"]
@@ -74,7 +91,7 @@ def test_renders_expected_layout(project: Path) -> None:
 
 @pytest.mark.slow
 def test_generated_project_passes_its_own_gates(project: Path) -> None:
-    if project.name != "minimal" and shutil.which("docker") is None:
+    if project.name not in {"minimal", "with-mcp"} and shutil.which("docker") is None:
         pytest.skip("Docker is required for integration tests")
     sh(project, "make", "bootstrap")
     sh(project, "make", "check")
@@ -110,21 +127,20 @@ def wait_for_api(server: subprocess.Popen[bytes], log: Path) -> str:
 @pytest.mark.smoke
 def test_default_scaffold_runs_without_docker(tmp_path: Path) -> None:
     project = tmp_path / "acme-orders"
-    project.mkdir()
+    dist = tmp_path / "dist"
+    sh(ROOT, "uv", "build", "--wheel", "--out-dir", str(dist))
+    (wheel,) = dist.glob("*.whl")
     sh(
-        ROOT,
-        sys.executable,
-        "-m",
-        "copier",
-        "copy",
-        "--defaults",
-        "--vcs-ref=HEAD",
-        "-d",
-        "project_name=Acme Orders",
-        ".",
-        str(project),
+        tmp_path,
+        "uvx",
+        "--isolated",
+        "--from",
+        str(wheel),
+        "codex-scaffold",
+        project.name,
+        "--template",
+        str(ROOT),
     )
-    sh(project, "make", "bootstrap")
     assert (project / ".git").is_dir()
     assert (project / "uv.lock").is_file()
 

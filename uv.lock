@@ -14,21 +14,23 @@ wheels = [
 [[package]]
 name = "codex-harness-template"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
+dependencies = [
+    { name = "copier" },
+]
 
 [package.dev-dependencies]
 dev = [
-    { name = "copier" },
     { name = "pytest" },
     { name = "pyyaml" },
     { name = "ruff" },
 ]
 
 [package.metadata]
+requires-dist = [{ name = "copier", specifier = ">=9.4,<10" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "copier", specifier = ">=9.4" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "ruff", specifier = ">=0.8" },

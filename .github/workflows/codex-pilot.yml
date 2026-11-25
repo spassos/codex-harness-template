@@ -1,24 +1,50 @@
 name: Codex scaffolding pilot
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      check_access_only:
+        description: Check model access without starting candidate sessions
+        type: boolean
+        default: false
 
 permissions: {}
+env:
+  PILOT_MODEL: gpt-5.4
+
 jobs:
+  access:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify Responses API access
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo '::error::Configure the OPENAI_API_KEY Actions secret to run the pilot.'
+            exit 1
+          fi
+          request=$(jq -n --arg model "$PILOT_MODEL" \
+            '{model: $model, input: "Reply OK.", max_output_tokens: 16, store: false}')
+          response="$RUNNER_TEMP/model-access.json"
+          status=$(curl --silent --show-error --max-time 45 --output "$response" --write-out '%{http_code}' \
+            --header "Authorization: Bearer $OPENAI_API_KEY" --json "$request" https://api.openai.com/v1/responses)
+          if [[ "$status" == 200 ]] && jq -e '.status == "completed" or .status == "incomplete"' "$response" >/dev/null; then
+            exit 0
+          fi
+          code=$(jq -r '(.error.code // .error.type) | strings | select(test("^[A-Za-z0-9_.-]{1,64}$"))' "$response" 2>/dev/null || true)
+          echo "::error::OpenAI Responses API returned HTTP $status (${code:-unknown}) for $PILOT_MODEL."
+          exit 1
+
   prepare:
+    needs: access
+    if: ${{ !inputs.check_access_only }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
       matrix: ${{ steps.inputs.outputs.matrix }}
     steps:
-      - name: Verify pilot credentials
-        env:
-          CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
-        run: |
-          if [[ "$CONFIGURED" != true ]]; then
-            echo 'Configure the OPENAI_API_KEY Actions secret to run the pilot.'
-            exit 1
-          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
@@ -89,7 +115,7 @@ jobs:
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           codex-version: 0.172.0-alpha.2
-          model: gpt-5.4
+          model: ${{ env.PILOT_MODEL }}
           effort: medium
           sandbox: workspace-write
           codex-args: '["--trust", "-c", "sandbox_workspace_write.network_access=false"]'

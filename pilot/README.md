@@ -14,6 +14,12 @@ o workflow manual na revisão desejada. Isso utiliza a conta de API configurada 
 A revisão fixada, os parâmetros do modelo e o lockfile permitem reproduzir os insumos.
 O tempo inclui a inicialização da Action. O orçamento e o esforço são iguais nas duas condições.
 
+Antes de preparar os projetos, o workflow faz uma chamada à Responses API com o modelo do
+piloto e limite de 16 tokens de saída. Essa chamada verifica se o projeto da API consegue
+usar o modelo e fica fora da amostra. Para verificar só esse acesso, marque
+`check_access_only` ao executar o workflow. Se a API recusar a chamada, o GitHub mostra
+o status HTTP e o código de erro na anotação do job `access`.
+
 O job de preparação renderiza uma vez, remove somente os arquivos de orientação no controle
 e embaralha os identificadores. Cada executor recebe apenas seu pacote e a tarefa indicada.
 A avaliação roda em outra máquina depois de o agente terminar. A aplicação é reconstruída a
